@@ -38,7 +38,7 @@ setup(
     license='BSD',
     author='Ron DuPlain',
     author_email='ron.duplain@gmail.com',
-    description='dependency aggregation',
+    description='dependency aggregation (dip)',
     long_description=long_description,
     py_modules=['jeni'],
     requires=[],
