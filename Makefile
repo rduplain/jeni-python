@@ -3,7 +3,7 @@ tarball = `ls -1rt ./dist/*.tar* | tail -1`
 test: tox-command
 	@tox
 
-dist:
+dist: README.rst
 	python setup.py sdist --formats=bztar
 	@echo
 	@echo 'Use `make publish` to publish to PyPI.'
@@ -11,7 +11,7 @@ dist:
 	@echo Tarball for manual distribution:
 	@echo $(tarball)
 
-publish:
+publish: README.rst
 	python setup.py sdist --formats=bztar,zip upload
 
 install:
@@ -20,6 +20,9 @@ install:
 clean:
 	rm -fr __pycache__ build dist .tox
 	rm -f *.pyc MANIFEST .coverage .in_virtualenv.py
+
+README.rst: README.rst.in jeni.py
+	@python bin/build_rst.py README.rst.in > README.rst
 
 tox-command: virtualenv
 	@which tox >/dev/null 2>&1 || pip install tox

@@ -1,0 +1,67 @@
+====================================
+ jeni: dependency aggregation (dip)
+====================================
+
+**jeni** lets you build applications and not e.g. web applications.
+
+Overview
+========
+
+1. Define a set of dependencies that your system uses.
+2. Give your code natural call interfaces accepting those dependencies.
+3. Implement a **Provider** which can fulfill those dependencies in one call.
+
+This is **dependency aggregation**. Gather your dependencies into namespaces,
+use those namespaces to annotate callables, then implement those namespaces for
+the various contexts in which your application will need to run.
+
+jeni runs on Python 2.7, Python 3.2, Python 3.3, and pypy.
+
+
+Motivation
+==========
+
+Write code as its meant to be written, without pegging your call signatures to
+some monolithic object that only applies to a specific runtime. This is about
+more than just testing. This lets you write composable utilities.
+
+jeni's design principle is to have all annotated callables usable in a context
+that knows nothing about jeni. Any callable is as relevant to a fresh Python
+REPL as it is to a Provider.
+
+
+Annotations
+===========
+
+Annotations are implemented as decorators and not Python3 annotations in order
+to support Python2 and to allow for callables to have multiple annotations.
+
+
+API
+===
+
+.. exec:: import jeni
+.. eval:: insert_doc(jeni.BaseProvider)
+
+
+.. eval:: insert_args_doc(jeni.BaseProvider.annotate, ns='BaseProvider')
+
+
+.. eval:: insert_args_doc(jeni.BaseProvider.apply, ns='BaseProvider')
+
+
+.. eval:: insert_args_doc(jeni.BaseProvider.partial, ns='BaseProvider')
+
+
+.. eval:: insert_args_doc(jeni.BaseProvider.implement, ns='BaseProvider')
+
+
+.. eval:: insert_args_doc(jeni.BaseProvider.extend, ns='BaseProvider')
+
+
+License
+=======
+
+Copyright (c) 2013 Ron DuPlain <ron.duplain@gmail.com> (see AUTHORS file).
+
+Released under the BSD License (see LICENSE file).
