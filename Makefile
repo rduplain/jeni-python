@@ -1,3 +1,4 @@
+PYPI_URL = http://pypi.python.org/pypi
 tarball = `ls -1rt ./dist/*.tar* | tail -1`
 
 test: tox-command
@@ -12,7 +13,14 @@ dist: README.rst
 	@echo $(tarball)
 
 publish: README.rst
-	python setup.py sdist --formats=bztar,zip upload
+	python setup.py sdist --formats=bztar,zip upload -r $(PYPI_URL)
+
+publish-test: README.rst
+	python setup.py register -r $(PYPI_URL)
+	python setup.py sdist --formats=bztar,zip upload -r $(PYPI_URL)
+
+# Set a test PYPI_URL for the publish-test target.
+publish-test : PYPI_URL = https://testpypi.python.org/pypi
 
 install:
 	python setup.py install
