@@ -1,3 +1,7 @@
+# jeni.py
+# Copyright (c) 2013 Ron DuPlain <ron.duplain@gmail.com> (see AUTHORS file).
+# Released under the BSD License (see LICENSE file).
+
 """jeni: dependency aggregation (dip)."""
 
 __version__ = '0.1'
