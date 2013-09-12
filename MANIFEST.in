@@ -1,1 +1,2 @@
-include MANIFEST.in AUTHORS LICENSE test_jeni.py
+include README.txt MANIFEST.in AUTHORS LICENSE test_jeni.py
+exclude README.rst

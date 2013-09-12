@@ -1,5 +1,6 @@
-from distutils.core import setup
 from os import path
+
+from setuptools import setup
 
 from jeni import __version__
 

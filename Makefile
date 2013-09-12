@@ -28,7 +28,7 @@ install: README.txt
 	python setup.py install
 
 clean:
-	rm -fr __pycache__ build dist .tox
+	rm -fr __pycache__ build dist .tox *.egg-info
 	rm -f *.pyc MANIFEST README.txt .coverage .in_virtualenv.py
 
 # README.rst is for repository distribution.

@@ -8,6 +8,8 @@ data/
 *.db
 /dist/
 .DS_Store
+*.egg
+*.egg-info
 /.emacs*
 .in_virtualenv.py
 *.lock
