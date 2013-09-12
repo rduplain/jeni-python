@@ -1,4 +1,4 @@
-PYPI_URL = http://pypi.python.org/pypi
+PYPI_URL = https://pypi.python.org/pypi
 tarball = `ls -1rt ./dist/*.tar* | tail -1`
 
 all: README.rst test
