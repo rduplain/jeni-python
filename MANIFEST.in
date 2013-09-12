@@ -1,1 +1,1 @@
-include MANIFEST.in test_jeni.py
+include MANIFEST.in AUTHORS LICENSE test_jeni.py
