@@ -16,6 +16,7 @@ __MACOSX
 /MANIFEST
 *.out
 *.pyc
+README.html
 *.sqlite
 *.sw*
 .tox

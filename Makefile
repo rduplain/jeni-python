@@ -21,7 +21,7 @@ clean:
 	rm -fr __pycache__ build dist .tox
 	rm -f *.pyc MANIFEST .coverage .in_virtualenv.py
 
-README.rst: README.rst.in jeni.py
+README.rst: README.rst.in jeni.py bin/build_rst.py
 	@python bin/build_rst.py README.rst.in > README.rst
 
 tox-command: virtualenv
