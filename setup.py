@@ -22,7 +22,11 @@ CLASSIFIERS = [
     'Topic :: Software Development :: Libraries :: Python Modules']
 
 
-with open(path.join(path.dirname(__file__), 'README.txt')) as fd:
+README = 'README.txt'
+if not path.exists(README):
+    README = 'README.rst'
+
+with open(path.join(path.dirname(__file__), README)) as fd:
     long_description = '\n' + fd.read()
 
 
