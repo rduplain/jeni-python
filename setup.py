@@ -1,4 +1,5 @@
 from distutils.core import setup
+from os import path
 
 from jeni import __version__
 
@@ -21,6 +22,10 @@ CLASSIFIERS = [
     'Topic :: Software Development :: Libraries :: Python Modules']
 
 
+with open(path.join(path.dirname(__file__), 'README.txt')) as fd:
+    long_description = '\n' + fd.read()
+
+
 setup(
     name='jeni',
     version=__version__,
@@ -29,6 +34,7 @@ setup(
     author='Ron DuPlain',
     author_email='ron.duplain@gmail.com',
     description='dependency aggregation',
+    long_description=long_description,
     py_modules=['jeni'],
     requires=[],
     classifiers=CLASSIFIERS)
