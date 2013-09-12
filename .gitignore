@@ -17,6 +17,7 @@ __MACOSX
 *.out
 *.pyc
 README.html
+README.txt
 *.sqlite
 *.sw*
 .tox
