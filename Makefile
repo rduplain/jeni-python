@@ -24,6 +24,9 @@ publish-test: README.txt
 # Set a test PYPI_URL for the publish-test target.
 publish-test : PYPI_URL = https://testpypi.python.org/pypi
 
+develop: README.txt
+	python setup.py develop
+
 install: README.txt
 	python setup.py install
 
