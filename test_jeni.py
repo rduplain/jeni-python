@@ -639,5 +639,57 @@ class TestConstructorAnnotation(unittest.TestCase):
         self.assertEqual((6, 7), point.as_tuple())
 
 
+class TestCustomMethodNames(unittest.TestCase):
+    def setUp(self):
+        class Provider(jeni.BaseProvider):
+            accessor_pattern = '{}_gimme'
+
+            def __init__(self):
+                self.x = CloseMe()
+
+            def x_gimme(self):
+                self.x.open()
+                return self.x
+
+            def x_go_away(self):
+                self.x.close()
+
+            def is_close_method(self, name):
+                return name.endswith('_go_away')
+
+        @Provider.annotate('x')
+        def f(x):
+            self.assertEqual(False, x.closed)
+            return x
+
+        self.Provider = Provider
+        self.provider = Provider()
+        self.f = f
+
+    def test_apply(self):
+        x = self.provider.apply(self.f)
+        self.assertEqual(x, self.provider.x)
+
+    def test_close(self):
+        x = self.provider.apply(self.f)
+        self.provider.close()
+        self.assertIs(True, x.closed)
+
+    def test_format_method(self):
+        class ImpatientProvider(self.Provider):
+            def provide_y_now(self):
+                return 'y'
+
+            def format_accessor_name(self, object_name):
+                return 'provide_{}_now'.format(object_name)
+
+        @ImpatientProvider.annotate('y')
+        def g(y):
+            return y
+
+        provider = ImpatientProvider()
+        self.assertEqual('y', provider.apply(g))
+
+
 if __name__ == '__main__':
     unittest.main()
