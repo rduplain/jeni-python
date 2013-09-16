@@ -366,7 +366,7 @@ class TestProviderCloseContext(unittest.TestCase):
         self.assertEqual(True, thing.closed)
 
     def test_close_early(self):
-        with self.Provider() as provider:
+        with self.Provider():
             pass # assert no error
 
     def test_close_again(self):

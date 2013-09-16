@@ -1,7 +1,7 @@
 PYPI_URL = https://pypi.python.org/pypi
 tarball = `ls -1rt ./dist/*.tar* | tail -1`
 
-all: README.rst smoke
+all: flakes README.rst smoke
 
 test: tox-command README.txt
 	@tox
@@ -11,7 +11,10 @@ smoke: coverage-command
 	@coverage run test_jeni.py --failfast
 	@coverage report --show-missing --include=*jeni*
 
-dist: README.txt
+flakes: pyflakes-command
+	@pyflakes *.py
+
+dist: README.txt flakes
 	python setup.py sdist --formats=bztar
 	@echo
 	@echo 'Use `make publish` to publish to PyPI.'
@@ -19,10 +22,10 @@ dist: README.txt
 	@echo Tarball for manual distribution:
 	@echo $(tarball)
 
-publish: README.txt
+publish: README.txt flakes
 	python setup.py sdist --formats=bztar,zip upload -r $(PYPI_URL)
 
-publish-test: README.txt
+publish-test: README.txt flakes
 	python setup.py register -r $(PYPI_URL)
 	python setup.py sdist --formats=bztar,zip upload -r $(PYPI_URL)
 
@@ -54,6 +57,9 @@ tox-command: virtualenv
 
 coverage-command: virtualenv
 	@which coverage >/dev/null 2>&1 || pip install coverage
+
+pyflakes-command: virtualenv
+	@which pyflakes >/dev/null 2>&1 || pip install pyflakes
 
 virtualenv: .in_virtualenv.py
 	@python $<
