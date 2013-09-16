@@ -190,6 +190,12 @@ Additional API
 Remove callable annotation from class, inverse of ``annotate``.
 
 
+``BaseProvider.unimplement(cls, *provider_classes)``
+----------------------------------------------------
+
+Remove implementation declaration, inverse of ``implement``.
+
+
 ``BaseProvider.unextend(self, *providers)``
 -------------------------------------------
 

@@ -172,6 +172,12 @@ class BaseProvider(object):
         cls.class_implements[cls].extend(provider_classes)
 
     @classmethod
+    def unimplement(cls, *provider_classes):
+        """Remove implementation declaration, inverse of ``implement``."""
+        for provider_class in provider_classes:
+            cls.class_implements[cls].remove(provider_class)
+
+    @classmethod
     def lookup(cls, fn):
         """Look up callable in registered annotations, walking class tree."""
         for other_class in cls.mro():

@@ -248,6 +248,9 @@ class TestProviderCivics(unittest.TestCase):
         provider = Provider()
         self.assertEqual(1010 + 2020 + 3030, provider.apply(self.g))
 
+        Provider.unimplement(self.ProviderABC)
+        self.assertRaises(LookupError, provider.apply, self.g)
+
     def test_implement_multiple(self):
         class BaseProvider(jeni.BaseProvider):
             def get_a(self):
@@ -277,6 +280,9 @@ class TestProviderCivics(unittest.TestCase):
         ProviderOne.implement(self.ProviderABC, self.ProviderXYZ)
         provider_one = ProviderOne()
         self.assertEqual(1010 + 2020 + 3030, provider_one.apply(self.g))
+
+        ProviderOne.unimplement(self.ProviderABC, self.ProviderXYZ)
+        self.assertRaises(LookupError, provider_one.apply, self.g)
 
         class ProviderTwo(BaseProvider):
             """Implements ABC then XYZ in separate calls."""
