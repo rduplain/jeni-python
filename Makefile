@@ -1,10 +1,15 @@
 PYPI_URL = https://pypi.python.org/pypi
 tarball = `ls -1rt ./dist/*.tar* | tail -1`
 
-all: README.rst test
+all: README.rst smoke
 
 test: tox-command README.txt
 	@tox
+
+smoke: coverage-command
+	@coverage erase
+	@coverage run test_jeni.py --failfast
+	@coverage report --show-missing --include=*jeni*
 
 dist: README.txt
 	python setup.py sdist --formats=bztar
@@ -46,6 +51,9 @@ README.txt: README.rst.in jeni.py bin/build_rst.py
 
 tox-command: virtualenv
 	@which tox >/dev/null 2>&1 || pip install tox
+
+coverage-command: virtualenv
+	@which coverage >/dev/null 2>&1 || pip install coverage
 
 virtualenv: .in_virtualenv.py
 	@python $<
