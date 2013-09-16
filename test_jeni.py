@@ -163,8 +163,8 @@ class TestProviderCivics(unittest.TestCase):
 
     def test_call(self):
         self.assertEqual(6, self.g(lambda *a: sum(a), 1, 2, 3))
-        self.assertEqual(True, self.g(lambda *a: any(a), False, True, False))
-        self.assertEqual(False, self.g(lambda *a: all(a), False, True, False))
+        self.assertIs(True, self.g(lambda *a: any(a), False, True, False))
+        self.assertIs(False, self.g(lambda *a: all(a), False, True, False))
 
     def test_apply(self):
         self.assertEqual(2 * 4 * 8, self.provider_abc.apply(self.g))
@@ -332,9 +332,9 @@ class TestProviderSimpleClose(unittest.TestCase):
         thing = self.provider.get_thing()
         thing2 = self.provider.get_thing()
         self.assertIs(thing, thing2)
-        self.assertEqual(False, thing.closed)
+        self.assertIs(False, thing.closed)
         self.provider.close()
-        self.assertEqual(True, thing.closed)
+        self.assertIs(True, thing.closed)
 
     def test_close_early(self):
         self.provider.close() # assert no error
@@ -362,8 +362,8 @@ class TestProviderCloseContext(unittest.TestCase):
             thing = provider.get_thing()
             thing2 = provider.get_thing()
             self.assertIs(thing, thing2)
-            self.assertEqual(False, thing.closed)
-        self.assertEqual(True, thing.closed)
+            self.assertIs(False, thing.closed)
+        self.assertIs(True, thing.closed)
 
     def test_close_early(self):
         with self.Provider():
@@ -429,14 +429,14 @@ class TestProviderCloseOrder(unittest.TestCase):
         bar = self.provider.get_bar()
         bar2 = self.provider.get_bar()
         self.assertIs(bar, bar2)
-        self.assertEqual(False, foo.closed)
-        self.assertEqual(False, bar.closed)
+        self.assertIs(False, foo.closed)
+        self.assertIs(False, bar.closed)
         self.assertIsNot(foo, bar)
 
         self.provider.close()
 
-        self.assertEqual(True, foo.closed)
-        self.assertEqual(True, bar.closed)
+        self.assertIs(True, foo.closed)
+        self.assertIs(True, bar.closed)
         self.assertEqual(1, self.provider.call_count['close_foo'])
         self.assertEqual(1, self.provider.call_count['close_bar'])
         self.assertEqual(1, self.provider.call_count['some_method'])
@@ -445,11 +445,11 @@ class TestProviderCloseOrder(unittest.TestCase):
 
     def test_close_unused(self):
         foo = self.provider.get_foo()
-        self.assertEqual(False, foo.closed)
+        self.assertIs(False, foo.closed)
 
         self.provider.close()
 
-        self.assertEqual(True, foo.closed)
+        self.assertIs(True, foo.closed)
         self.assertEqual(1, self.provider.call_count['close_foo'])
         self.assertEqual(1, self.provider.call_count['close_bar'])
         self.assertEqual(1, self.provider.call_count['some_method'])
@@ -479,12 +479,12 @@ class TestProviderCloseOrder(unittest.TestCase):
         with self.Provider() as provider:
             foo = provider.get_foo()
             bar = provider.get_bar()
-            self.assertEqual(False, foo.closed)
-            self.assertEqual(False, bar.closed)
+            self.assertIs(False, foo.closed)
+            self.assertIs(False, bar.closed)
             self.assertIsNot(foo, bar)
 
-        self.assertEqual(True, foo.closed)
-        self.assertEqual(True, bar.closed)
+        self.assertIs(True, foo.closed)
+        self.assertIs(True, bar.closed)
         self.assertEqual(1, provider.call_count['close_foo'])
         self.assertEqual(1, provider.call_count['close_bar'])
         self.assertEqual(1, provider.call_count['some_method'])
@@ -538,7 +538,7 @@ class TestCloseExtend(unittest.TestCase):
     def test_close(self):
         foo_provider = self.FooProvider()
         foo = foo_provider.get_foo()
-        self.assertEqual(False, foo.closed)
+        self.assertIs(False, foo.closed)
 
         bar_provider = self.BarProvider()
         bar_provider.extend(foo_provider)
@@ -546,17 +546,17 @@ class TestCloseExtend(unittest.TestCase):
 
         @self.BarProvider.annotate('foo', 'bar')
         def baz(foo, bar):
-            self.assertEqual(False, foo.closed)
-            self.assertEqual(False, bar.closed)
+            self.assertIs(False, foo.closed)
+            self.assertIs(False, bar.closed)
 
         bar_provider.apply(baz)
         bar_provider.close()
-        self.assertEqual(False, foo.closed)
-        self.assertEqual(True, bar.closed)
+        self.assertIs(False, foo.closed)
+        self.assertIs(True, bar.closed)
 
         foo_provider.close()
-        self.assertEqual(True, foo.closed)
-        self.assertEqual(True, bar.closed)
+        self.assertIs(True, foo.closed)
+        self.assertIs(True, bar.closed)
 
     def test_close_immediately(self):
         foo_provider = self.FooProvider()
@@ -659,7 +659,7 @@ class TestCustomMethodNames(unittest.TestCase):
 
         @Provider.annotate('x')
         def f(x):
-            self.assertEqual(False, x.closed)
+            self.assertIs(False, x.closed)
             return x
 
         self.Provider = Provider
