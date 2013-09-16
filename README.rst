@@ -190,6 +190,12 @@ Additional API
 Remove callable annotation from class, inverse of ``annotate``.
 
 
+``BaseProvider.unextend(self, *providers)``
+-------------------------------------------
+
+Remove provider extension, inverse of ``extend``.
+
+
 ``BaseProvider.format_accessor_name(self, object_name)``
 --------------------------------------------------------
 

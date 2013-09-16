@@ -198,6 +198,9 @@ class TestProviderCivics(unittest.TestCase):
 
         self.assertEqual(2 + 4 + 8, provider.apply(do_g))
 
+        provider.unextend(self.provider_abc)
+        self.assertRaises(AttributeError, provider.apply, do_g)
+
     def test_extend_multiple(self):
         class Provider(jeni.BaseProvider):
             def get_fn(self):
@@ -212,6 +215,8 @@ class TestProviderCivics(unittest.TestCase):
             return self.g(*a)
 
         self.assertEqual(2 + 4 + 100, provider.apply(do_g))
+        provider.unextend(self.provider_abc, self.provider_xyz)
+        self.assertRaises(AttributeError, provider.apply, do_g)
 
         base = jeni.BaseProvider()
 

@@ -246,6 +246,13 @@ class BaseProvider(object):
         extends.extend(providers) # Python heard that you like to extend.
         self.extends = extends
 
+    def unextend(self, *providers):
+        """Remove provider extension, inverse of ``extend``."""
+        extends = getattr(self, 'extends', [])
+        for provider in providers:
+            extends.remove(provider)
+        self.extends = extends
+
     def __getattr__(self, name):
         """Get attribute, falling back to extension Providers' methods."""
         if name == 'extends':

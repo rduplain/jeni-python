@@ -69,6 +69,9 @@ Additional API
 .. eval:: insert_args_doc(BaseProvider.unannotate, **opt)
 
 
+.. eval:: insert_args_doc(BaseProvider.unextend, **opt)
+
+
 .. eval:: insert_args_doc(BaseProvider.format_accessor_name, **opt)
 
 
