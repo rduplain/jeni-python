@@ -300,6 +300,274 @@ class TestProviderCivics(unittest.TestCase):
         self.assertEqual(-1010 + -2020 + -3030, provider_five.apply(self.g))
 
 
+class CloseMe(object):
+    def __init__(self):
+        self.closed = None
+
+    def open(self):
+        self.closed = False
+
+    def close(self):
+        self.closed = True
+
+
+class TestProviderSimpleClose(unittest.TestCase):
+    def setUp(self):
+        class Provider(jeni.BaseProvider):
+            def get_thing(self):
+                if hasattr(self, 'thing'):
+                    return self.thing
+                self.thing = CloseMe()
+                self.thing.open()
+                return self.thing
+
+            def close_thing(self):
+                if not hasattr(self, 'thing'):
+                    return
+                self.thing.close()
+
+        self.provider = Provider()
+
+    def test_close(self):
+        thing = self.provider.get_thing()
+        thing2 = self.provider.get_thing()
+        self.assertIs(thing, thing2)
+        self.assertEqual(False, thing.closed)
+        self.provider.close()
+        self.assertEqual(True, thing.closed)
+
+    def test_close_early(self):
+        self.provider.close() # assert no error
+
+
+class TestProviderCloseContext(unittest.TestCase):
+    def setUp(self):
+        class Provider(jeni.BaseProvider):
+            def get_thing(self):
+                if hasattr(self, 'thing'):
+                    return self.thing
+                self.thing = CloseMe()
+                self.thing.open()
+                return self.thing
+
+            def close_thing(self):
+                if not hasattr(self, 'thing'):
+                    return
+                self.thing.close()
+
+        self.Provider = Provider
+
+    def test_close(self):
+        with self.Provider() as provider:
+            thing = provider.get_thing()
+            thing2 = provider.get_thing()
+            self.assertIs(thing, thing2)
+            self.assertEqual(False, thing.closed)
+        self.assertEqual(True, thing.closed)
+
+    def test_close_early(self):
+        with self.Provider() as provider:
+            pass # assert no error
+
+    def test_close_again(self):
+        with self.Provider() as provider:
+            pass # assert no error
+        provider.close() # assert no error
+
+
+class TestProviderCloseOrder(unittest.TestCase):
+    def setUp(self):
+        class Provider(jeni.BaseProvider):
+            before_close = ['some_method', 'close_foo']
+
+            def __init__(self):
+                self.call_count = {}
+                self.call_order = []
+
+            def get_bar(self):
+                if hasattr(self, 'bar'):
+                    return self.bar
+                self.bar = CloseMe()
+                self.bar.open()
+                return self.bar
+
+            def close_bar(self):
+                count = self.call_count.get('close_bar', 0)
+                self.call_count['close_bar'] = count + 1
+                self.call_order.append('close_bar')
+                if not hasattr(self, 'bar'):
+                    return
+                self.bar.close()
+
+            def get_foo(self):
+                if hasattr(self, 'foo'):
+                    return self.foo
+                self.foo = CloseMe()
+                self.foo.open()
+                return self.foo
+
+            def close_foo(self):
+                count = self.call_count.get('close_foo', 0)
+                self.call_count['close_foo'] = count + 1
+                self.call_order.append('close_foo')
+                if not hasattr(self, 'foo'):
+                    return
+                self.foo.close()
+
+            def some_method(self):
+                count = self.call_count.get('some_method', 0)
+                self.call_count['some_method'] = count + 1
+                self.call_order.append('some_method')
+
+        self.Provider = Provider
+        self.provider = Provider()
+
+    def test_close(self):
+        foo = self.provider.get_foo()
+        foo2 = self.provider.get_foo()
+        self.assertIs(foo, foo2)
+        bar = self.provider.get_bar()
+        bar2 = self.provider.get_bar()
+        self.assertIs(bar, bar2)
+        self.assertEqual(False, foo.closed)
+        self.assertEqual(False, bar.closed)
+        self.assertIsNot(foo, bar)
+
+        self.provider.close()
+
+        self.assertEqual(True, foo.closed)
+        self.assertEqual(True, bar.closed)
+        self.assertEqual(1, self.provider.call_count['close_foo'])
+        self.assertEqual(1, self.provider.call_count['close_bar'])
+        self.assertEqual(1, self.provider.call_count['some_method'])
+        call_order = ['some_method', 'close_foo', 'close_bar']
+        self.assertEqual(call_order, self.provider.call_order)
+
+    def test_close_unused(self):
+        foo = self.provider.get_foo()
+        self.assertEqual(False, foo.closed)
+
+        self.provider.close()
+
+        self.assertEqual(True, foo.closed)
+        self.assertEqual(1, self.provider.call_count['close_foo'])
+        self.assertEqual(1, self.provider.call_count['close_bar'])
+        self.assertEqual(1, self.provider.call_count['some_method'])
+        call_order = ['some_method', 'close_foo', 'close_bar']
+        self.assertEqual(call_order, self.provider.call_order)
+
+    def test_close_early(self):
+        self.provider.close()
+        self.assertEqual(1, self.provider.call_count['close_foo'])
+        self.assertEqual(1, self.provider.call_count['close_bar'])
+        self.assertEqual(1, self.provider.call_count['some_method'])
+        call_order = ['some_method', 'close_foo', 'close_bar']
+        self.assertEqual(call_order, self.provider.call_order)
+
+    def test_close_again(self):
+        self.provider.close()
+        self.provider.close()
+        self.assertEqual(2, self.provider.call_count['close_foo'])
+        self.assertEqual(2, self.provider.call_count['close_bar'])
+        self.assertEqual(2, self.provider.call_count['some_method'])
+        call_order = ['some_method', 'close_foo', 'close_bar']
+        self.assertEqual(call_order * 2, self.provider.call_order)
+
+    def test_context_manager(self):
+        del self.provider # do not confuse instances in test
+
+        with self.Provider() as provider:
+            foo = provider.get_foo()
+            bar = provider.get_bar()
+            self.assertEqual(False, foo.closed)
+            self.assertEqual(False, bar.closed)
+            self.assertIsNot(foo, bar)
+
+        self.assertEqual(True, foo.closed)
+        self.assertEqual(True, bar.closed)
+        self.assertEqual(1, provider.call_count['close_foo'])
+        self.assertEqual(1, provider.call_count['close_bar'])
+        self.assertEqual(1, provider.call_count['some_method'])
+        call_order = ['some_method', 'close_foo', 'close_bar']
+        self.assertEqual(call_order, provider.call_order)
+
+    def test_duplicate_before(self):
+        self.Provider.before_close = [
+            'some_method',
+            'close_foo',
+            'some_method']
+        self.provider.close()
+        self.assertEqual(1, self.provider.call_count['close_foo'])
+        self.assertEqual(1, self.provider.call_count['close_bar'])
+        self.assertEqual(1, self.provider.call_count['some_method'])
+        call_order = ['some_method', 'close_foo', 'close_bar']
+        self.assertEqual(call_order, self.provider.call_order)
+
+
+class TestCloseExtend(unittest.TestCase):
+    def setUp(self):
+        class FooProvider(jeni.BaseProvider):
+            def get_foo(self):
+                if hasattr(self, 'foo'):
+                    return self.foo
+                self.foo = CloseMe()
+                self.foo.open()
+                return self.foo
+
+            def close_foo(self):
+                if not hasattr(self, 'foo'):
+                    return
+                self.foo.close()
+
+        class BarProvider(jeni.BaseProvider):
+            def get_bar(self):
+                if hasattr(self, 'bar'):
+                    return self.bar
+                self.bar = CloseMe()
+                self.bar.open()
+                return self.bar
+
+            def close_bar(self):
+                if not hasattr(self, 'bar'):
+                    return
+                self.bar.close()
+
+        self.FooProvider = FooProvider
+        self.BarProvider = BarProvider
+
+    def test_close(self):
+        foo_provider = self.FooProvider()
+        foo = foo_provider.get_foo()
+        self.assertEqual(False, foo.closed)
+
+        bar_provider = self.BarProvider()
+        bar_provider.extend(foo_provider)
+        bar = bar_provider.get_bar()
+
+        @self.BarProvider.annotate('foo', 'bar')
+        def baz(foo, bar):
+            self.assertEqual(False, foo.closed)
+            self.assertEqual(False, bar.closed)
+
+        bar_provider.apply(baz)
+        bar_provider.close()
+        self.assertEqual(False, foo.closed)
+        self.assertEqual(True, bar.closed)
+
+        foo_provider.close()
+        self.assertEqual(True, foo.closed)
+        self.assertEqual(True, bar.closed)
+
+    def test_close_immediately(self):
+        foo_provider = self.FooProvider()
+        bar_provider = self.BarProvider()
+        bar_provider.extend(foo_provider)
+
+        # Assert no error.
+        foo_provider.close()
+        bar_provider.close()
+
+
 class TestSelfApply(unittest.TestCase):
     def setUp(self):
         class BaseProvider(jeni.BaseProvider):

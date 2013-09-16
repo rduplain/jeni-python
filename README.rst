@@ -110,7 +110,7 @@ which is configurable using the ``accessor_pattern`` class attribute or
 ``format_accessor_name`` method.
 
 Provider implementations of accessors should return ``None`` when the
-requested dependency is valid but null and ``UNSET`` when the provider
+requested dependency is valid but null and ``UNSET`` when the Provider
 is unable to provide the requested dependency. An ``UNSET`` return
 value triggers an error condition on positional arguments, but in the
 case of keyword arguments, an ``UNSET`` value will result in that
@@ -129,16 +129,45 @@ Fully apply annotated callable, returning callable's result.
 Partially apply annotated callable, returning a partial function.
 
 
+``BaseProvider.close(self)``
+----------------------------
+
+Close Provider resources, for use in cleanup and not critical path.
+
+A Provider's **close** operation will call all ``close_dependency``
+methods of the provider instance, even if the corresponding accessor
+was never called. Therefore, these close methods should function
+correctly even if the ``get_dependency`` accessor was never called. The
+``close_dependency`` method pattern is a convention which is
+configurable by customizing the ``is_close_method`` method. Methods
+called during ``close`` do not take any arguments.
+
+Methods listed (by strings matching the method name) in the
+``before_close`` class attribute (list) are called in order before
+scanning for ``close_dependency`` methods on the Provider. Each method
+called is called only once during ``close``.
+
+A Provider's close operation will only call close methods that the
+Provider defines, even if it is extending another Provider
+instance. This is to ensure that each Provider instance has its own
+lifecycle with explicit calls to the close operation.
+
+Provider close methods should not intentionally raise errors.
+Specifically, if a dependency has transactions, the transaction should
+be committed or rolled back before close is called, and not left as an
+operation to be called during the close phase.
+
+
 ``BaseProvider.implement(cls, *provider_classes)``
 --------------------------------------------------
 
-Implement annotations of other providers without subclassing.
+Implement annotations of other Providers without subclassing.
 
 
 ``BaseProvider.extend(self, *providers)``
 -----------------------------------------
 
-Extend providers, using their accessors when not provided by self.
+Extend Providers, using their accessors when not provided by self.
 
 Providers in the extension list are accessed in the order in which they
 are registered, and are only used for methods and NOT attributes.
@@ -146,10 +175,10 @@ Accessing a non-method/non-function attribute will only attempt to
 access that attribute on ``self``. Note that properties/descriptors
 test as methods and not the type of their return value.
 
-This approach allows a provider to expose another provider's methods
+This approach allows a Provider to expose another Provider's methods
 without collisions with private attributes and memoization patterns
-where the current provider uses the same names as the extended
-provider.
+where the current Provider uses the same names as the extended
+Provider.
 
 
 License

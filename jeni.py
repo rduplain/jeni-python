@@ -4,7 +4,7 @@
 
 """jeni: dependency aggregation (dip)."""
 
-__version__ = '0.1'
+__version__ = '0.2-dev'
 
 import functools
 import re
@@ -39,8 +39,10 @@ class BaseProvider(object):
 
     class_annotation = {} # registry: {class: {callable: (notes, keywords)}}
     class_implements = {} # registry: {class: classes}
-    note_re = re.compile(r'([^:]*):?(.*)') # regular expression: 'object:name'
-    accessor_pattern = 'get_{}' # conventional naming of dependency accessors
+    accessor_pattern = 'get_{}' # naming convention of dependency accessors
+    re_close_method = re.compile(r'^close_.*') # dependency close methods
+    re_note = re.compile(r'([^:]*):?(.*)') # annotation format: 'object:name'
+    before_close = [] # optional order of method names to call first on `close`
 
     @classmethod
     def annotate(cls, *notes, **keyword_notes):
@@ -89,7 +91,7 @@ class BaseProvider(object):
         ``format_accessor_name`` method.
 
         Provider implementations of accessors should return ``None`` when the
-        requested dependency is valid but null and ``UNSET`` when the provider
+        requested dependency is valid but null and ``UNSET`` when the Provider
         is unable to provide the requested dependency. An ``UNSET`` return
         value triggers an error condition on positional arguments, but in the
         case of keyword arguments, an ``UNSET`` value will result in that
@@ -98,7 +100,7 @@ class BaseProvider(object):
         if cls not in cls.class_annotation:
             cls.class_annotation[cls] = {}
         def decorator(fn):
-            """Register callable with provider without modifying callable."""
+            """Register callable with Provider without modifying callable."""
             cls.class_annotation[cls][fn] = (notes, keyword_notes)
             return fn
         return decorator
@@ -115,9 +117,51 @@ class BaseProvider(object):
         args, kwargs = self.resolve_notes(*notes, **keyword_notes)
         return functools.partial(fn, *args, **kwargs)
 
+    def close(self):
+        """Close Provider resources, for use in cleanup and not critical path.
+
+        A Provider's **close** operation will call all ``close_dependency``
+        methods of the provider instance, even if the corresponding accessor
+        was never called. Therefore, these close methods should function
+        correctly even if the ``get_dependency`` accessor was never called. The
+        ``close_dependency`` method pattern is a convention which is
+        configurable by customizing the ``is_close_method`` method. Methods
+        called during ``close`` do not take any arguments.
+
+        Methods listed (by strings matching the method name) in the
+        ``before_close`` class attribute (list) are called in order before
+        scanning for ``close_dependency`` methods on the Provider. Each method
+        called is called only once during ``close``.
+
+        A Provider's close operation will only call close methods that the
+        Provider defines, even if it is extending another Provider
+        instance. This is to ensure that each Provider instance has its own
+        lifecycle with explicit calls to the close operation.
+
+        Provider close methods should not intentionally raise errors.
+        Specifically, if a dependency has transactions, the transaction should
+        be committed or rolled back before close is called, and not left as an
+        operation to be called during the close phase.
+        """
+        called = set()
+        for name in self.before_close:
+            if name in called:
+                continue
+            method = getattr(self, name)
+            method()
+            called.add(name)
+        for name in dir(self):
+            if name in called:
+                continue
+            if not self.is_close_method(name):
+                continue
+            method = getattr(self, name)
+            method()
+            called.add(name)
+
     @classmethod
     def implement(cls, *provider_classes):
-        """Implement annotations of other providers without subclassing."""
+        """Implement annotations of other Providers without subclassing."""
         if cls not in cls.class_implements:
             cls.class_implements[cls] = []
         cls.class_implements[cls].extend(provider_classes)
@@ -168,15 +212,19 @@ class BaseProvider(object):
 
     def parse_note(self, note):
         """Parse string annotation into object reference with optional name."""
-        match = self.note_re.match(note)
+        match = self.re_note.match(note)
         return tuple(group or None for group in match.groups())
 
     def format_accessor_name(self, object_name):
         """Given object name, return accessor name which provides object."""
         return self.accessor_pattern.format(object_name)
 
+    def is_close_method(self, name):
+        """Indicate whether method name is for a dependency close method."""
+        return self.re_close_method.search(name) is not None
+
     def extend(self, *providers):
-        """Extend providers, using their accessors when not provided by self.
+        """Extend Providers, using their accessors when not provided by self.
 
         Providers in the extension list are accessed in the order in which they
         are registered, and are only used for methods and NOT attributes.
@@ -184,17 +232,17 @@ class BaseProvider(object):
         access that attribute on ``self``. Note that properties/descriptors
         test as methods and not the type of their return value.
 
-        This approach allows a provider to expose another provider's methods
+        This approach allows a Provider to expose another Provider's methods
         without collisions with private attributes and memoization patterns
-        where the current provider uses the same names as the extended
-        provider.
+        where the current Provider uses the same names as the extended
+        Provider.
         """
         extends = getattr(self, 'extends', [])
         extends.extend(providers) # Python heard that you like to extend.
         self.extends = extends
 
     def __getattr__(self, name):
-        """Get attribute, falling back to extension providers' methods."""
+        """Get attribute, falling back to extension Providers' methods."""
         if name == 'extends':
             # Avoid infinite recursion.
             return object.__getattribute__(self, name)
@@ -213,3 +261,9 @@ class BaseProvider(object):
                 continue
         # Finally, fail.
         return object.__getattribute__(self, name) # AttributeError
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, exc_type, exc_value, traceback):
+        self.close()

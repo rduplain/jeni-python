@@ -53,6 +53,9 @@ API
 .. eval:: insert_args_doc(jeni.BaseProvider.partial, ns='BaseProvider')
 
 
+.. eval:: insert_args_doc(jeni.BaseProvider.close, ns='BaseProvider')
+
+
 .. eval:: insert_args_doc(jeni.BaseProvider.implement, ns='BaseProvider')
 
 
