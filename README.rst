@@ -39,8 +39,8 @@ Annotations are implemented as decorators and not Python3 annotations in order
 to support Python2 and to allow for callables to have multiple annotations.
 
 
-API
-===
+Core API
+========
 
 ``BaseProvider``
 ----------------
@@ -117,12 +117,6 @@ case of keyword arguments, an ``UNSET`` value will result in that
 keyword argument not being passed to the annotated callable.
 
 
-``BaseProvider.unannotate(cls, fn)``
-------------------------------------
-
-Remove callable annotation from class, inverse of ``annotate``.
-
-
 ``BaseProvider.apply(self, fn)``
 --------------------------------
 
@@ -185,6 +179,27 @@ This approach allows a Provider to expose another Provider's methods
 without collisions with private attributes and memoization patterns
 where the current Provider uses the same names as the extended
 Provider.
+
+
+Additional API
+==============
+
+``BaseProvider.unannotate(cls, fn)``
+------------------------------------
+
+Remove callable annotation from class, inverse of ``annotate``.
+
+
+``BaseProvider.format_accessor_name(self, object_name)``
+--------------------------------------------------------
+
+Given object name, return accessor name which provides object.
+
+
+``BaseProvider.is_close_method(self, name)``
+--------------------------------------------
+
+Indicate whether method name is for a dependency close method.
 
 
 License

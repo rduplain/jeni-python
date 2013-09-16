@@ -37,32 +37,42 @@ Annotations are implemented as decorators and not Python3 annotations in order
 to support Python2 and to allow for callables to have multiple annotations.
 
 
-API
-===
+Core API
+========
 
-.. exec:: import jeni
-.. eval:: insert_doc(jeni.BaseProvider)
-
-
-.. eval:: insert_args_doc(jeni.BaseProvider.annotate, ns='BaseProvider')
+.. exec:: from jeni import BaseProvider
+.. eval:: insert_doc(BaseProvider)
 
 
-.. eval:: insert_args_doc(jeni.BaseProvider.unannotate, ns='BaseProvider')
+.. exec:: opt = {'ns': 'BaseProvider', 'u': '-'}
+.. eval:: insert_args_doc(BaseProvider.annotate, **opt)
 
 
-.. eval:: insert_args_doc(jeni.BaseProvider.apply, ns='BaseProvider')
+.. eval:: insert_args_doc(BaseProvider.apply, **opt)
 
 
-.. eval:: insert_args_doc(jeni.BaseProvider.partial, ns='BaseProvider')
+.. eval:: insert_args_doc(BaseProvider.partial, **opt)
 
 
-.. eval:: insert_args_doc(jeni.BaseProvider.close, ns='BaseProvider')
+.. eval:: insert_args_doc(BaseProvider.close, **opt)
 
 
-.. eval:: insert_args_doc(jeni.BaseProvider.implement, ns='BaseProvider')
+.. eval:: insert_args_doc(BaseProvider.implement, **opt)
 
 
-.. eval:: insert_args_doc(jeni.BaseProvider.extend, ns='BaseProvider')
+.. eval:: insert_args_doc(BaseProvider.extend, **opt)
+
+
+Additional API
+==============
+
+.. eval:: insert_args_doc(BaseProvider.unannotate, **opt)
+
+
+.. eval:: insert_args_doc(BaseProvider.format_accessor_name, **opt)
+
+
+.. eval:: insert_args_doc(BaseProvider.is_close_method, **opt)
 
 
 License
