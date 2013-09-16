@@ -18,8 +18,9 @@ class TestProviderBasics(unittest.TestCase):
                 return x * y * z
             return x * y
 
-        self.f = f
+        self.Provider = Provider
         self.provider = Provider()
+        self.f = f
 
     def test_call(self):
         self.assertEqual(42, self.f(6, 7))
@@ -35,6 +36,12 @@ class TestProviderBasics(unittest.TestCase):
         fn = self.provider.partial(self.f)
         self.assertEqual(4200, fn(100))
         self.assertEqual(4200, fn(z=100))
+
+    def test_unannotate(self):
+        self.assertEqual(42, self.provider.apply(self.f))
+        self.Provider.unannotate(self.f)
+        self.assertRaises(LookupError, self.provider.apply, self.f)
+        self.assertRaises(KeyError, self.Provider.unannotate, self.f)
 
 
 class TestProviderNotApplicable(unittest.TestCase):

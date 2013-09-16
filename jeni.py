@@ -105,6 +105,11 @@ class BaseProvider(object):
             return fn
         return decorator
 
+    @classmethod
+    def unannotate(cls, fn):
+        """Remove callable annotation from class, inverse of ``annotate``."""
+        cls.class_annotation[cls].pop(fn)
+
     def apply(self, fn):
         """Fully apply annotated callable, returning callable's result."""
         notes, keyword_notes = self.lookup(fn)

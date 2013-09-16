@@ -117,6 +117,12 @@ case of keyword arguments, an ``UNSET`` value will result in that
 keyword argument not being passed to the annotated callable.
 
 
+``BaseProvider.unannotate(cls, fn)``
+------------------------------------
+
+Remove callable annotation from class, inverse of ``annotate``.
+
+
 ``BaseProvider.apply(self, fn)``
 --------------------------------
 
