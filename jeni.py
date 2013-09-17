@@ -207,7 +207,7 @@ class BaseProvider(object):
         kwargs = {k: self.resolve_note(v) for k, v in keyword_notes.items()}
         for arg, note in zip(args, notes):
             if arg is UNSET:
-                msg = "'{}' is unable to provide '{}'.".format(self, note)
+                msg = "{} is unable to provide '{}'.".format(self, note)
                 raise UnsetError(msg)
         kwargs = {k: v for k, v in kwargs.items() if v is not UNSET}
         return args, kwargs
