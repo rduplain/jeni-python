@@ -4,7 +4,7 @@
 
 """jeni: dependency aggregation (dip)."""
 
-__version__ = '0.2-dev'
+__version__ = '0.2'
 
 import functools
 import re
