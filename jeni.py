@@ -17,6 +17,9 @@ UNSET = object()
 
 class UnsetError(KeyError):
     """Note could possibly be provided, but is currently unset."""
+    def __init__(self, note, *a, **kw):
+        self.note = note
+        super(UnsetError, self).__init__(*a, **kw)
 
 
 class BaseProvider(object):
@@ -208,7 +211,7 @@ class BaseProvider(object):
         for arg, note in zip(args, notes):
             if arg is UNSET:
                 msg = "{} is unable to provide '{}'.".format(self, note)
-                raise UnsetError(msg)
+                raise UnsetError(note, msg)
         kwargs = {k: v for k, v in kwargs.items() if v is not UNSET}
         return args, kwargs
 

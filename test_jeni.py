@@ -123,6 +123,11 @@ class TestProviderArguments(unittest.TestCase):
         provider = self.Provider({'y': 1})
         self.assertRaises(jeni.UnsetError, provider.apply, self.f)
 
+        try:
+            provider.apply(self.f)
+        except jeni.UnsetError as e:
+            self.assertEqual('data:x', e.note)
+
         another = self.Provider({'y': 1, 'fn': lambda *a: sum(a)})
         self.assertRaises(jeni.UnsetError, another.apply, self.f)
 
