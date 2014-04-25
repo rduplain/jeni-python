@@ -1,5 +1,7 @@
 import abc
+import functools
 import inspect
+import re
 
 import six
 
@@ -19,6 +21,9 @@ UNSET = Unset()
 
 class UnsetError(KeyError):
     """Note could possibly be provided, but is currently unset."""
+    def __init__(self, note, *a, **kw):
+        self.note = note
+        super(UnsetError, self).__init__(*a, **kw)
 
 
 # Motivation: dependency injection using prepared providers.
@@ -39,24 +44,144 @@ class Provider(object):
 
 class Injector(object):
     """Collects dependencies and reads annotations to fulfill them."""
-    # register(provider...) -- classmethod
-    # register function -- return value, no close
-    # register generator -- yield value, then continuation to close
+    provider_registry = {} # registry: {class: {note: provider_or_fn}}
+    re_note = re.compile(r'([^:]*):?(.*)') # annotation format: 'object:name'
 
-    # partial
+    def __init__(self):
+        self.instances = {}
 
-    # apply
+    @classmethod
+    def register(cls, *provider_seq):
+        if cls not in cls.provider_registry:
+            cls.provider_registry[cls] = {}
+        for provider in provider_seq:
+            cls.provider_registry[cls][provider.provide] = provider
+        if len(provider_seq) > 0:
+            # Support use as a decorator.
+            return provider_seq[0]
 
-    # following work with self and delegate to parent:
+    @classmethod
+    def factory(cls, note, fn=None, generator=False):
+        if cls not in cls.provider_registry:
+            cls.provider_registry[cls] = {}
+        def decorator(f):
+            if generator:
+                provider = cls.generator_to_provider(note, f)
+                cls.provider_registry[cls][note] = provider
+            else:
+                cls.provider_registry[cls][note] = f
+            return f
+        if fn is None:
+            return decorator
+        return decorator(fn)
 
-    # fulfill - resolve notes into dependencies
+    @classmethod
+    def generator(cls, note, fn=None):
+        return cls.factory(note, fn=fn, generator=True)
 
-    # enter and exit as method and __method__
+    @classmethod
+    def unregister(cls, note):
+        cls.provider_registry[cls].pop(note)
+        if not cls.provider_registry[cls]:
+            cls.provider_registry.pop(cls)
 
-    # close -- call close all providers which have been called
+    def apply(self, fn):
+        notes, keyword_notes = collect_notes(fn)
+        args, kwargs = self.fulfill(*notes, **keyword_notes)
+        return fn(*args, **kwargs)
+
+    def partial(self, fn):
+        notes, keyword_notes = collect_notes(fn)
+        args, kwargs = self.fulfill(*notes, **keyword_notes)
+        return functools.partial(fn, *args, **kwargs)
+
+    def fulfill(self, *notes, **keyword_notes):
+        """Fulfill injection during function application."""
+        args = tuple(self.resolve(note) for note in notes)
+        kwargs = {k: self.resolve(v) for k, v in keyword_notes.items()}
+        for arg, note in zip(args, notes):
+            if arg is UNSET:
+                msg = "{!r} is unable to provide '{}'.".format(self, note)
+                raise UnsetError(note, msg)
+        kwargs = {k: v for k, v in kwargs.items() if v is not UNSET}
+        return args, kwargs
+
+    def resolve(self, note):
+        """Resolve a single note into an object."""
+        basenote, name = self.parse_note(note)
+        try:
+            provider_or_fn = self.lookup(basenote)
+        except LookupError:
+            msg = "Unable to resolve '{}'"
+            raise LookupError(msg.format(note))
+        return self.handle_provider(provider_or_fn, basenote, name=name)
+
+    def handle_provider(self, provider_or_fn, basenote, name=None):
+        if inspect.isclass(provider_or_fn):
+            if basenote in self.instances:
+                provider_or_fn = self.instances[basenote]
+            else:
+                provider_or_fn = provider_or_fn()
+                self.instances[basenote] = provider_or_fn
+        if hasattr(provider_or_fn, 'get'):
+            fn = provider_or_fn.get
+        else:
+            fn = provider_or_fn
+        if has_annotations(fn):
+            fn = self.partial(fn)
+        if name is not None:
+            return fn(name=name)
+        return fn()
+
+    def parse_note(self, note):
+        """Parse string annotation into object reference with optional name."""
+        match = self.re_note.match(note)
+        return tuple(group or None for group in match.groups())
+
+    @classmethod
+    def lookup(cls, basenote):
+        """Look up note in registered annotations, walking class tree."""
+        # Walk method resolution order, which includes current class.
+        for c in cls.mro():
+            if not hasattr(c, 'provider_registry'):
+                # class is a mixin or super to this base class.
+                continue
+            if c not in c.provider_registry:
+                # class registration functions never used.
+                continue
+            if basenote in c.provider_registry[c]:
+                # note is in the registry.
+                return c.provider_registry[c][basenote]
+        raise LookupError(repr(basenote))
+
+    # TODO: enter and exit as method and __method__
+
+    # TODO: close -- call close all providers which have been called
     # keeping counts on all tokens resolved, not just bool, would be nice
 
-    pass
+    @classmethod
+    def generator_to_provider(cls, note, fn):
+        class LambdaProvider(Provider):
+            provide = note
+            def get(self, name=None):
+                if hasattr(self, 'value'):
+                    return self.value
+                self.generator = fn()
+                try:
+                    self.value = six.next(self.generator)
+                except StopIteration:
+                    raise RuntimeError("generator didn't yield")
+                return self.value
+            def close(self):
+                if not hasattr(self, 'generator'):
+                    return
+                try:
+                    six.next(self.generator)
+                except StopIteration:
+                    return
+                else:
+                    raise RuntimeError("generator didn't stop")
+        return LambdaProvider
 
 
 # Annotations provide key data for jeni's injection.
@@ -179,6 +304,23 @@ def supports_extra_keywords(fn):
 
 
 if __name__ == '__main__':
+    @Injector.generator('answer')
+    def fn():
+        print('before')
+        yield 42
+        print('after')
+
+    injector = Injector()
+    print(Injector.provider_registry)
+    print(injector.fulfill('answer'))
+    print(injector.resolve('answer'))
+
+    Provider = Injector.generator_to_provider('answer', fn)
+    provider = Provider()
+    print(provider.get())
+    print(provider.get())
+    provider.close()
+
     class FooProvider(Provider):
         provide = 'foo'
 
