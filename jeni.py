@@ -135,7 +135,11 @@ class Injector(object):
 
     def parse_note(self, note):
         """Parse string annotation into object reference with optional name."""
-        match = self.re_note.match(note)
+        try:
+            match = self.re_note.match(note)
+        except TypeError:
+            # Note is not a string. Support any Python object as a note.
+            return note, None
         return tuple(group or None for group in match.groups())
 
     @classmethod
@@ -320,6 +324,9 @@ if __name__ == '__main__':
     print(provider.get())
     print(provider.get())
     provider.close()
+
+    Injector.factory(42, fn, generator=True)
+    print(injector.resolve(42))
 
     class FooProvider(Provider):
         provide = 'foo'
