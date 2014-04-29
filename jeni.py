@@ -10,27 +10,15 @@ import abc
 import functools
 import inspect
 import re
+import sys
 
 import six
 
 
-# Provide sentinel object that indicates a dependency cannot be fulfilled.
-
-class Unset(object):
-    """Alternative to None, and None may be a properly provided value."""
-    __slots__ = ()
-
-    def __nonzero__(self):
-        return False
-
-
-UNSET = Unset()
-
-
-class UnsetError(KeyError):
-    """Note could possibly be provided, but is currently unset."""
-    def __init__(self, note, *a, **kw):
-        self.note = note
+class UnsetError(LookupError):
+    """Note is not able to be provided, as it is currently unset."""
+    def __init__(self, *a, **kw):
+        self.note = kw.pop('note', None)
         super(UnsetError, self).__init__(*a, **kw)
 
 
@@ -106,12 +94,14 @@ class Injector(object):
     def fulfill(self, *notes, **keyword_notes):
         """Fulfill injection during function application."""
         args = tuple(self.resolve(note) for note in notes)
-        kwargs = {k: self.resolve(v) for k, v in keyword_notes.items()}
-        for arg, note in zip(args, notes):
-            if arg is UNSET:
-                msg = "{!r} is unable to provide '{}'.".format(self, note)
-                raise UnsetError(note, msg)
-        kwargs = {k: v for k, v in kwargs.items() if v is not UNSET}
+        kwargs = {}
+        for arg in keyword_notes:
+            # TODO: Maybe.
+            note = keyword_notes[arg]
+            try:
+                kwargs[arg] = self.resolve(note)
+            except UnsetError:
+                continue
         return args, kwargs
 
     def resolve(self, note):
@@ -122,9 +112,9 @@ class Injector(object):
         except LookupError:
             msg = "Unable to resolve '{}'"
             raise LookupError(msg.format(note))
-        return self.handle_provider(provider_or_fn, basenote, name=name)
+        return self.handle_provider(provider_or_fn, note, basenote, name=name)
 
-    def handle_provider(self, provider_or_fn, basenote, name=None):
+    def handle_provider(self, provider_or_fn, note, basenote, name=None):
         if inspect.isclass(provider_or_fn):
             if basenote in self.instances:
                 provider_or_fn = self.instances[basenote]
@@ -137,9 +127,15 @@ class Injector(object):
             fn = provider_or_fn
         if has_annotations(fn):
             fn = self.partial(fn)
-        if name is not None:
-            return fn(name=name)
-        return fn()
+        try:
+            if name is not None:
+                return fn(name=name)
+            return fn()
+        except UnsetError:
+            # Use sys.exc_info to support both Python 2 and Python 3.
+            exc_type, exc_value, tb = sys.exc_info()
+            exc_value.note = note
+            six.reraise(exc_type, exc_value, tb)
 
     def parse_note(self, note):
         """Parse string annotation into object reference with optional name."""
