@@ -40,56 +40,44 @@ class Provider(object):
 
 class Injector(object):
     """Collects dependencies and reads annotations to fulfill them."""
-    provider_registry = {} # registry: {class: {note: provider_or_fn}}
-    re_note = re.compile(r'([^:]*):?(.*)') # annotation format: 'object:name'
+    re_note = re.compile(r'^(.*?)(?::(.*))?$') # annotation is 'object:name'
 
     def __init__(self):
         self.instances = {}
 
     @classmethod
-    def register(cls, *provider_seq):
-        if cls not in cls.provider_registry:
-            cls.provider_registry[cls] = {}
+    def provider(cls, *provider_seq):
         for provider in provider_seq:
-            cls.provider_registry[cls][provider.provide] = provider
-        if len(provider_seq) > 0:
+            cls.register(provider.provide, provider)
+        if len(provider_seq) == 1:
             # Support use as a decorator.
             return provider_seq[0]
 
     @classmethod
-    def factory(cls, note, fn=None, generator=False):
-        if cls not in cls.provider_registry:
-            cls.provider_registry[cls] = {}
+    def factory(cls, note, fn=None):
         def decorator(f):
-            if generator:
+            if inspect.isgeneratorfunction(f):
                 provider = cls.generator_to_provider(note, f)
-                cls.provider_registry[cls][note] = provider
+                cls.register(note, provider)
             else:
-                cls.provider_registry[cls][note] = f
+                cls.register(note, f)
             return f
         if fn is None:
             return decorator
         return decorator(fn)
 
-    @classmethod
-    def generator(cls, note, fn=None):
-        return cls.factory(note, fn=fn, generator=True)
-
-    @classmethod
-    def unregister(cls, note):
-        cls.provider_registry[cls].pop(note)
-        if not cls.provider_registry[cls]:
-            cls.provider_registry.pop(cls)
-
     def apply(self, fn):
-        notes, keyword_notes = collect_notes(fn)
-        args, kwargs = self.fulfill(*notes, **keyword_notes)
+        args, kwargs = self.prepare(fn)
         return fn(*args, **kwargs)
 
     def partial(self, fn):
+        args, kwargs = self.prepare(fn)
+        return functools.partial(fn, *args, **kwargs)
+
+    def prepare(self, fn):
         notes, keyword_notes = collect_notes(fn)
         args, kwargs = self.fulfill(*notes, **keyword_notes)
-        return functools.partial(fn, *args, **kwargs)
+        return args, kwargs
 
     def fulfill(self, *notes, **keyword_notes):
         """Fulfill injection during function application."""
@@ -137,29 +125,38 @@ class Injector(object):
             exc_value.note = note
             six.reraise(exc_type, exc_value, tb)
 
-    def parse_note(self, note):
+    @classmethod
+    def parse_note(cls, note):
         """Parse string annotation into object reference with optional name."""
+        if isinstance(note, tuple):
+            if len(note) != 2:
+                raise ValueError('tuple annotations must be length 2')
+            return note
         try:
-            match = self.re_note.match(note)
+            match = cls.re_note.match(note)
         except TypeError:
             # Note is not a string. Support any Python object as a note.
             return note, None
-        return tuple(group or None for group in match.groups())
+        return match.groups()
+
+    @classmethod
+    def register(cls, note, provider):
+        basenote, name = cls.parse_note(note)
+        if 'provider_registry' not in cls.__dict__:
+            cls.provider_registry = {}
+        cls.__dict__['provider_registry'][basenote] = provider
 
     @classmethod
     def lookup(cls, basenote):
         """Look up note in registered annotations, walking class tree."""
         # Walk method resolution order, which includes current class.
         for c in cls.mro():
-            if not hasattr(c, 'provider_registry'):
-                # class is a mixin or super to this base class.
+            if 'provider_registry' not in c.__dict__:
+                # class is a mixin, super to base class, or never registered.
                 continue
-            if c not in c.provider_registry:
-                # class registration functions never used.
-                continue
-            if basenote in c.provider_registry[c]:
+            if basenote in c.provider_registry:
                 # note is in the registry.
-                return c.provider_registry[c][basenote]
+                return c.provider_registry[basenote]
         raise LookupError(repr(basenote))
 
     # TODO: enter and exit as method and __method__
@@ -314,7 +311,7 @@ def supports_extra_keywords(fn):
 
 
 if __name__ == '__main__':
-    @Injector.generator('answer')
+    @Injector.factory('answer')
     def fn():
         print('before')
         yield 42
@@ -331,9 +328,10 @@ if __name__ == '__main__':
     print(provider.get())
     provider.close()
 
-    Injector.factory(42, fn, generator=True)
+    Injector.factory(42, fn)
     print(injector.resolve(42))
 
+    @Injector.provider
     class FooProvider(Provider):
         provide = 'foo'
 
@@ -344,3 +342,30 @@ if __name__ == '__main__':
     foo_provider = FooProvider()
     print(foo_provider.get('bar', 'baz'))
     print(collect_notes(foo_provider.get))
+
+    @Injector.factory('error')
+    def error():
+        raise UnsetError
+
+    @annotate('error')
+    def positional_error(error):
+        print('You should not see me.')
+
+    @annotate('answer', unused='error')
+    def keyword_error(answer, unused=None):
+        assert unused is None
+
+    try:
+        injector.apply(positional_error)
+    except UnsetError:
+        err = sys.exc_info()[1]
+        assert err.note == 'error'
+
+    injector.apply(keyword_error)
+
+    class SubInjector(Injector):
+        pass
+
+    SubInjector.factory('universe', fn)
+    sub_injector = SubInjector()
+    print(sub_injector.fulfill('answer'))
