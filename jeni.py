@@ -1,3 +1,11 @@
+# jeni.py
+# Copyright 2013-2014 Ron DuPlain <ron.duplain@gmail.com> (see AUTHORS file).
+# Released under the BSD License (see LICENSE file).
+
+"""jeni: dependency injection through annotations (dip)."""
+
+__version__ = '0.3-dev'
+
 import abc
 import functools
 import inspect
