@@ -276,6 +276,8 @@ def class_in_progress(stack=None):
         stack = inspect.stack()
     for frame in stack:
         statement_list = frame[4]
+        if statement_list is None:
+            continue
         if statement_list[0].strip().startswith('class '):
             return True
     return False
@@ -299,7 +301,7 @@ def get_named_positional_keyword_arguments(fn):
     argspec = getargspec(fn)
     args = get_function_arguments(fn)
     keywords = {}
-    for default in reversed(argspec.defaults):
+    for default in reversed(argspec.defaults or []):
         keywords[args.pop()] = default
     return tuple(args), keywords
 
