@@ -146,16 +146,16 @@ class Injector(object):
     @classmethod
     def register(cls, note, provider):
         basenote, name = cls.parse_note(note)
-        if 'provider_registry' not in cls.__dict__:
+        if 'provider_registry' not in vars(cls):
             cls.provider_registry = {}
-        cls.__dict__['provider_registry'][basenote] = provider
+        cls.provider_registry[basenote] = provider
 
     @classmethod
     def lookup(cls, basenote):
         """Look up note in registered annotations, walking class tree."""
         # Walk method resolution order, which includes current class.
         for c in cls.mro():
-            if 'provider_registry' not in c.__dict__:
+            if 'provider_registry' not in vars(c):
                 # class is a mixin, super to base class, or never registered.
                 continue
             if basenote in c.provider_registry:
