@@ -15,6 +15,8 @@ import sys
 import six
 
 
+# TODO: Update all docstrings and rewrite test_jeni.py.
+
 class UnsetError(LookupError):
     """Note is not able to be provided, as it is currently unset."""
     def __init__(self, *a, **kw):
@@ -166,6 +168,8 @@ class Injector(object):
 
     @classmethod
     def generator_to_provider(cls, note, fn):
+        # TODO: Support get-by-name with generator send API.
+        #       ... while still supporting this context manager case.
         class LambdaProvider(Provider):
             provide = note
             def get(self, name=None):
@@ -193,6 +197,7 @@ class Injector(object):
 
 def annotate(*notes, **keyword_notes):
     """Decorator-maker to annotate a given callable."""
+    # TODO: Support base-case to opt-in a function annotated in Python 3.
     def decorator(fn):
         set_annotations(fn, *notes, **keyword_notes)
         return fn
@@ -201,6 +206,7 @@ def annotate(*notes, **keyword_notes):
 
 def set_annotations(fn, *notes, **keyword_notes):
     """Set the annotations on the given callable."""
+    # TODO: Do not use __annotations__ since there are no standards.
     if getattr(fn, '__annotations__', None):
         raise AttributeError('callable is already annotated: {!r}'.format(fn))
     check_for_extras(fn, keyword_notes)
@@ -220,6 +226,7 @@ def set_annotations(fn, *notes, **keyword_notes):
 
 def get_annotations(fn):
     """Get the annotations of a given callable."""
+    # TODO: Do not use __annotations__ since there are no standards.
     annotations = getattr(fn, '__annotations__', None)
     if annotations:
         return annotations
