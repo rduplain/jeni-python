@@ -28,10 +28,6 @@ class UnsetError(LookupError):
 
 @six.add_metaclass(abc.ABCMeta)
 class Provider(object):
-    @abc.abstractproperty
-    def provide(self):
-        return
-
     @abc.abstractmethod
     def get(self, name=None):
         return
@@ -48,25 +44,31 @@ class Injector(object):
         self.instances = {}
 
     @classmethod
-    def provider(cls, *provider_seq):
-        for provider in provider_seq:
-            cls.register(provider.provide, provider)
-        if len(provider_seq) == 1:
-            # Support use as a decorator.
-            return provider_seq[0]
+    def provider(cls, note, provider=None):
+        def decorator(fn_or_class):
+            if inspect.isgeneratorfunction(fn_or_class):
+                provider = cls.generator_to_provider(fn_or_class)
+            else:
+                provider = fn_or_class
+            if not hasattr(provider, 'get'):
+                msg = "{!r} does not meet provider interface with 'get'"
+                raise ValueError(msg.format(provider))
+            cls.register(note, provider)
+            return fn_or_class
+        if provider is not None:
+            decorator(provider)
+        else:
+            return decorator
 
     @classmethod
     def factory(cls, note, fn=None):
-        def decorator(f):
-            if inspect.isgeneratorfunction(f):
-                provider = cls.generator_to_provider(note, f)
-                cls.register(note, provider)
-            else:
+        if fn is not None:
+            cls.register(note, fn)
+        else:
+            def decorator(f):
                 cls.register(note, f)
-            return f
-        if fn is None:
+                return f
             return decorator
-        return decorator(fn)
 
     def apply(self, fn):
         args, kwargs = self.prepare(fn)
@@ -167,11 +169,10 @@ class Injector(object):
     # keeping counts on all tokens resolved, not just bool, would be nice
 
     @classmethod
-    def generator_to_provider(cls, note, fn):
+    def generator_to_provider(cls, fn):
         # TODO: Support get-by-name with generator send API.
         #       ... while still supporting this context manager case.
         class LambdaProvider(Provider):
-            provide = note
             def get(self, name=None):
                 if hasattr(self, 'value'):
                     return self.value
@@ -318,7 +319,7 @@ def supports_extra_keywords(fn):
 
 
 if __name__ == '__main__':
-    @Injector.factory('answer')
+    @Injector.provider('answer')
     def fn():
         print('before')
         yield 42
@@ -329,19 +330,17 @@ if __name__ == '__main__':
     print(injector.fulfill('answer'))
     print(injector.resolve('answer'))
 
-    Provider = Injector.generator_to_provider('answer', fn)
+    Provider = Injector.generator_to_provider(fn)
     provider = Provider()
     print(provider.get())
     print(provider.get())
     provider.close()
 
-    Injector.factory(42, fn)
+    Injector.provider(42, fn)
     print(injector.resolve(42))
 
-    @Injector.provider
+    @Injector.provider('foo')
     class FooProvider(Provider):
-        provide = 'foo'
-
         @annotate('bar', 'baz')
         def get(self, bar, baz, name=None):
             return bar, baz, 'foo'
