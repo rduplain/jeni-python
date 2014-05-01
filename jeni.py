@@ -36,24 +36,57 @@ class Provider(object):
         return
 
 
+class GeneratorProvider(Provider):
+    def __init__(self, function):
+        self.function = function
+
+    def init(self, *a, **kw):
+        self.generator = self.function(*a, **kw)
+        self.init_value = next(self.generator)
+        return self.init_value
+
+    def get(self, name=None):
+        if name is None:
+            return self.init_value
+        try:
+            value = self.generator.send(name)
+        except StopIteration:
+            msg = "generator didn't yield: function {!r}"
+            raise RuntimeError(msg.format(self.function))
+        return value
+
+    def close(self):
+        self.generator.close()
+        try:
+            next(self.generator)
+        except StopIteration:
+            return
+        else:
+            msg = "generator didn't stop: function {!r}"
+            raise RuntimeError(msg.format(self.function))
+
+
 class Injector(object):
     """Collects dependencies and reads annotations to fulfill them."""
+    generator_provider = GeneratorProvider
     re_note = re.compile(r'^(.*?)(?::(.*))?$') # annotation is 'object:name'
 
     def __init__(self):
+        self.closed = False
         self.instances = {}
+        self.values = {}
 
     @classmethod
     def provider(cls, note, provider=None):
         def decorator(fn_or_class):
             if inspect.isgeneratorfunction(fn_or_class):
-                provider = cls.generator_to_provider(fn_or_class)
+                cls.register(note, fn_or_class)
             else:
                 provider = fn_or_class
-            if not hasattr(provider, 'get'):
-                msg = "{!r} does not meet provider interface with 'get'"
-                raise ValueError(msg.format(provider))
-            cls.register(note, provider)
+                if not hasattr(provider, 'get'):
+                    msg = "{!r} does not meet provider interface with 'get'"
+                    raise ValueError(msg.format(provider))
+                cls.register(note, provider)
             return fn_or_class
         if provider is not None:
             decorator(provider)
@@ -78,6 +111,15 @@ class Injector(object):
         args, kwargs = self.prepare(fn)
         return functools.partial(fn, *args, **kwargs)
 
+    def close(self):
+        # TODO: have an opinion about order of closed
+        # TODO: keeping counts on tokens resolved, not just bool, would be nice
+        if self.closed:
+            raise RuntimeError('{!r} already closed'.format(self))
+        for provider in self.instances.values():
+            provider.close()
+        self.closed = True
+
     def prepare(self, fn):
         notes, keyword_notes = collect_notes(fn)
         args, kwargs = self.fulfill(*notes, **keyword_notes)
@@ -99,6 +141,8 @@ class Injector(object):
     def resolve(self, note):
         """Resolve a single note into an object."""
         basenote, name = self.parse_note(note)
+        if name is None and basenote in self.values:
+            return self.values[basenote]
         try:
             provider_or_fn = self.lookup(basenote)
         except LookupError:
@@ -107,12 +151,17 @@ class Injector(object):
         return self.handle_provider(provider_or_fn, note, basenote, name=name)
 
     def handle_provider(self, provider_or_fn, note, basenote, name=None):
-        if inspect.isclass(provider_or_fn):
-            if basenote in self.instances:
-                provider_or_fn = self.instances[basenote]
-            else:
-                provider_or_fn = provider_or_fn()
-                self.instances[basenote] = provider_or_fn
+        if basenote in self.instances:
+            provider_or_fn = self.instances[basenote]
+        elif inspect.isclass(provider_or_fn):
+            provider_or_fn = provider_or_fn()
+            self.instances[basenote] = provider_or_fn
+        elif inspect.isgeneratorfunction(provider_or_fn):
+            provider_or_fn, value = self.init_generator(provider_or_fn)
+            self.instances[basenote] = provider_or_fn
+            self.values[basenote] = value
+            if name is None:
+                return value
         if hasattr(provider_or_fn, 'get'):
             fn = provider_or_fn.get
         else:
@@ -120,9 +169,11 @@ class Injector(object):
         if has_annotations(fn):
             fn = self.partial(fn)
         try:
-            if name is not None:
-                return fn(name=name)
-            return fn()
+            if name is None:
+                value = fn()
+                self.values[basenote] = value
+                return value
+            return fn(name=name)
         except UnsetError:
             # Use sys.exc_info to support both Python 2 and Python 3.
             exc_type, exc_value, tb = sys.exc_info()
@@ -163,35 +214,17 @@ class Injector(object):
                 return c.provider_registry[basenote]
         raise LookupError(repr(basenote))
 
+    def init_generator(self, fn):
+        provider = self.generator_provider(fn)
+        if has_annotations(provider.function):
+            notes, keyword_notes = collect_notes(provider.function)
+            args, kwargs = self.fulfill(*notes, **keyword_notes)
+            value = provider.init(*args, **kwargs)
+        else:
+            value = provider.init()
+        return provider, value
+
     # TODO: enter and exit as method and __method__
-
-    # TODO: close -- call close all providers which have been called
-    # keeping counts on all tokens resolved, not just bool, would be nice
-
-    @classmethod
-    def generator_to_provider(cls, fn):
-        # TODO: Support get-by-name with generator send API.
-        #       ... while still supporting this context manager case.
-        class LambdaProvider(Provider):
-            def get(self, name=None):
-                if hasattr(self, 'value'):
-                    return self.value
-                self.generator = fn()
-                try:
-                    self.value = six.next(self.generator)
-                except StopIteration:
-                    raise RuntimeError("generator didn't yield")
-                return self.value
-            def close(self):
-                if not hasattr(self, 'generator'):
-                    return
-                try:
-                    six.next(self.generator)
-                except StopIteration:
-                    return
-                else:
-                    raise RuntimeError("generator didn't stop")
-        return LambdaProvider
 
 
 # Annotations provide key data for jeni's injection.
@@ -322,16 +355,18 @@ if __name__ == '__main__':
     @Injector.provider('answer')
     def fn():
         print('before')
-        yield 42
-        print('after')
+        try:
+            yield 42
+        finally:
+            print('after')
 
     injector = Injector()
     print(Injector.provider_registry)
     print(injector.fulfill('answer'))
     print(injector.resolve('answer'))
 
-    Provider = Injector.generator_to_provider(fn)
-    provider = Provider()
+    provider = GeneratorProvider(fn)
+    provider.init()
     print(provider.get())
     print(provider.get())
     provider.close()
@@ -375,3 +410,49 @@ if __name__ == '__main__':
     SubInjector.factory('universe', fn)
     sub_injector = SubInjector()
     print(sub_injector.fulfill('answer'))
+
+    @Injector.provider('generator')
+    def generator():
+        try:
+            yield 'Hello, world!'
+        finally:
+            print('generator closing')
+
+    print('starting generator')
+    print(injector.resolve('generator'))
+    print(injector.resolve('generator'))
+    # TODO: provide useful error for this...
+    # print(injector.resolve('generator:name'))
+
+    @Injector.provider('generator_with_name')
+    def generator_with_name():
+        try:
+            name = yield 'Hello, world!'
+            while True:
+                name = yield 'Hello, {}!'.format(name)
+        finally:
+            print('generator_with_name closing')
+
+    print('starting generator_with_name')
+    print(injector.resolve('generator_with_name'))
+    print(injector.resolve('generator_with_name'))
+    print(injector.resolve('generator_with_name:name_here'))
+    print(injector.resolve('generator_with_name:name_there'))
+
+    @Injector.provider('generator_with_name_and_annotations')
+    @annotate('answer', unused='error')
+    def generator_with_name_and_annotations(answer, unused=None):
+        try:
+            name = yield 'Hello, {}!'.format(answer)
+            while True:
+                name = yield 'Hello, {}!'.format(name)
+        finally:
+            print('generator_with_name_and_annotations closing')
+
+    print('starting generator_with_name_and_annotations')
+    print(injector.resolve('generator_with_name_and_annotations'))
+    print(injector.resolve('generator_with_name_and_annotations'))
+    print(injector.resolve('generator_with_name_and_annotations:name_here'))
+    print(injector.resolve('generator_with_name_and_annotations:name_there'))
+
+    injector.close()
