@@ -37,8 +37,9 @@ class Provider(object):
 
 
 class GeneratorProvider(Provider):
-    def __init__(self, function):
+    def __init__(self, function, support_name=False):
         self.function = function
+        self.support_name = support_name
 
     def init(self, *a, **kw):
         self.generator = self.function(*a, **kw)
@@ -48,6 +49,9 @@ class GeneratorProvider(Provider):
     def get(self, name=None):
         if name is None:
             return self.init_value
+        elif not self.support_name:
+            msg = "generator does not support get-by-name: function {!r}"
+            raise TypeError(msg.format(self.function))
         try:
             value = self.generator.send(name)
         except StopIteration:
@@ -56,7 +60,8 @@ class GeneratorProvider(Provider):
         return value
 
     def close(self):
-        self.generator.close()
+        if self.support_name:
+            self.generator.close()
         try:
             next(self.generator)
         except StopIteration:
@@ -77,10 +82,12 @@ class Injector(object):
         self.values = {}
 
     @classmethod
-    def provider(cls, note, provider=None):
+    def provider(cls, note, provider=None, name=False):
         def decorator(fn_or_class):
             if inspect.isgeneratorfunction(fn_or_class):
-                cls.register(note, fn_or_class)
+                fn = fn_or_class
+                fn.support_name = name
+                cls.register(note, fn)
             else:
                 provider = fn_or_class
                 if not hasattr(provider, 'get'):
@@ -215,7 +222,7 @@ class Injector(object):
         raise LookupError(repr(basenote))
 
     def init_generator(self, fn):
-        provider = self.generator_provider(fn)
+        provider = self.generator_provider(fn, support_name=fn.support_name)
         if has_annotations(provider.function):
             notes, keyword_notes = collect_notes(provider.function)
             args, kwargs = self.fulfill(*notes, **keyword_notes)
@@ -355,10 +362,8 @@ if __name__ == '__main__':
     @Injector.provider('answer')
     def fn():
         print('before')
-        try:
-            yield 42
-        finally:
-            print('after')
+        yield 42
+        print('after')
 
     injector = Injector()
     print(Injector.provider_registry)
@@ -413,18 +418,21 @@ if __name__ == '__main__':
 
     @Injector.provider('generator')
     def generator():
-        try:
-            yield 'Hello, world!'
-        finally:
-            print('generator closing')
+        yield 'Hello, world!'
+        print('generator closing')
 
     print('starting generator')
     print(injector.resolve('generator'))
     print(injector.resolve('generator'))
-    # TODO: provide useful error for this...
-    # print(injector.resolve('generator:name'))
+    try:
+        print(injector.resolve('generator:name'))
+    except TypeError:
+        _, error, _ = sys.exc_info()
+        print(error)
+    else:
+        assert False, "'generator:name' should have failed"
 
-    @Injector.provider('generator_with_name')
+    @Injector.provider('generator_with_name', name=True)
     def generator_with_name():
         try:
             name = yield 'Hello, world!'
@@ -439,7 +447,7 @@ if __name__ == '__main__':
     print(injector.resolve('generator_with_name:name_here'))
     print(injector.resolve('generator_with_name:name_there'))
 
-    @Injector.provider('generator_with_name_and_annotations')
+    @Injector.provider('generator_with_name_and_annotations', name=True)
     @annotate('answer', unused='error')
     def generator_with_name_and_annotations(answer, unused=None):
         try:
