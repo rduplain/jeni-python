@@ -43,8 +43,13 @@ class GeneratorProvider(Provider):
 
     def init(self, *a, **kw):
         self.generator = self.function(*a, **kw)
-        self.init_value = next(self.generator)
-        return self.init_value
+        try:
+            self.init_value = next(self.generator)
+        except StopIteration:
+            msg = "generator didn't yield: function {!r}"
+            raise RuntimeError(msg.format(self.function))
+        else:
+            return self.init_value
 
     def get(self, name=None):
         if name is None:
