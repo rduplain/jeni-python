@@ -2,8 +2,6 @@ from os import path
 
 from setuptools import setup
 
-from jeni import __version__
-
 
 CLASSIFIERS = [
     'Development Status :: 4 - Beta',
@@ -23,6 +21,21 @@ CLASSIFIERS = [
     'Topic :: Software Development :: Libraries :: Python Modules']
 
 
+def extract_version(filepath='jeni.py', name='__version__'):
+    """Parse __version__ out of given Python file.
+
+    Given jeni.py has dependencies, `from jeni import __version__` will fail.
+    """
+    context = {}
+    for line in open(filepath):
+        if name in line:
+            exec(line, context)
+            break
+    else:
+        raise RuntimeError('{} not found in {}'.format(name, filepath))
+    return context[name]
+
+
 README = 'README.txt'
 if not path.exists(README):
     README = 'README.rst'
@@ -33,13 +46,15 @@ with open(path.join(path.dirname(__file__), README)) as fd:
 
 setup(
     name='jeni',
-    version=__version__,
+    version=extract_version(),
     url='https://github.com/rduplain/jeni-python',
     license='BSD',
     author='Ron DuPlain',
     author_email='ron.duplain@gmail.com',
-    description='dependency aggregation (dip)',
+    description='dependency injection through annotations (dip)',
     long_description=long_description,
     py_modules=['jeni'],
-    requires=[],
+    install_requires=[
+        'six',
+    ],
     classifiers=CLASSIFIERS)
