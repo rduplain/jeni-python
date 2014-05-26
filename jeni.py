@@ -15,7 +15,7 @@ import sys
 import six
 
 
-# TODO: Update all docstrings, rewrite test_jeni.py, rewrite README.
+# TODO: Update all docstrings, rewrite README.
 
 class UnsetError(LookupError):
     """Note is not able to be provided, as it is currently unset."""
@@ -30,16 +30,17 @@ class UnsetError(LookupError):
 class Provider(object):
     @abc.abstractmethod
     def get(self, name=None):
-        return
+        "Implement in sub-class."
 
     def close(self):
-        return
+        "By default, does nothing."
 
 
 class GeneratorProvider(Provider):
     def __init__(self, function, support_name=False):
         self.function = function
         self.support_name = support_name
+        self.initialized = False
 
     def init(self, *a, **kw):
         self.generator = self.function(*a, **kw)
@@ -49,9 +50,13 @@ class GeneratorProvider(Provider):
             msg = "generator didn't yield: function {!r}"
             raise RuntimeError(msg.format(self.function))
         else:
+            self.initialized = True
             return self.init_value
 
     def get(self, name=None):
+        if not self.initialized:
+            msg = '{!r} not initialized; call `init` before `get`.'
+            raise RuntimeError(msg.format(self))
         if name is None:
             return self.init_value
         elif not self.support_name:
@@ -65,6 +70,8 @@ class GeneratorProvider(Provider):
         return value
 
     def close(self):
+        if not self.initialized:
+            raise RuntimeError('{!r} not initialized'.format(self))
         if self.support_name:
             self.generator.close()
         try:
@@ -244,6 +251,7 @@ class Injector(object):
 def annotate(*notes, **keyword_notes):
     """Decorator-maker to annotate a given callable."""
     # TODO: Support base-case to opt-in a function annotated in Python 3.
+    # TODO: Support annotation to inject partial.
     def decorator(fn):
         set_annotations(fn, *notes, **keyword_notes)
         return fn
@@ -361,111 +369,3 @@ def supports_extra_keywords(fn):
     if hasattr(inspect, 'getfullargspec'):
         return inspect.getfullargspec(fn).varkw is not None
     return inspect.getargspec(fn).keywords is not None
-
-
-if __name__ == '__main__':
-    @Injector.provider('answer')
-    def fn():
-        print('before')
-        yield 42
-        print('after')
-
-    injector = Injector()
-    print(Injector.provider_registry)
-    print(injector.fulfill('answer'))
-    print(injector.resolve('answer'))
-
-    provider = GeneratorProvider(fn)
-    provider.init()
-    print(provider.get())
-    print(provider.get())
-    provider.close()
-
-    Injector.provider(42, fn)
-    print(injector.resolve(42))
-
-    @Injector.provider('foo')
-    class FooProvider(Provider):
-        @annotate('bar', 'baz')
-        def get(self, bar, baz, name=None):
-            return bar, baz, 'foo'
-
-    foo_provider = FooProvider()
-    print(foo_provider.get('bar', 'baz'))
-    print(collect_notes(foo_provider.get))
-
-    @Injector.factory('error')
-    def error():
-        raise UnsetError
-
-    @annotate('error')
-    def positional_error(error):
-        print('You should not see me.')
-
-    @annotate('answer', unused='error')
-    def keyword_error(answer, unused=None):
-        assert unused is None
-
-    try:
-        injector.apply(positional_error)
-    except UnsetError:
-        err = sys.exc_info()[1]
-        assert err.note == 'error'
-
-    injector.apply(keyword_error)
-
-    class SubInjector(Injector):
-        pass
-
-    SubInjector.factory('universe', fn)
-    sub_injector = SubInjector()
-    print(sub_injector.fulfill('answer'))
-
-    @Injector.provider('generator')
-    def generator():
-        yield 'Hello, world!'
-        print('generator closing')
-
-    print('starting generator')
-    print(injector.resolve('generator'))
-    print(injector.resolve('generator'))
-    try:
-        print(injector.resolve('generator:name'))
-    except TypeError:
-        _, error, _ = sys.exc_info()
-        print(error)
-    else:
-        assert False, "'generator:name' should have failed"
-
-    @Injector.provider('generator_with_name', name=True)
-    def generator_with_name():
-        try:
-            name = yield 'Hello, world!'
-            while True:
-                name = yield 'Hello, {}!'.format(name)
-        finally:
-            print('generator_with_name closing')
-
-    print('starting generator_with_name')
-    print(injector.resolve('generator_with_name'))
-    print(injector.resolve('generator_with_name'))
-    print(injector.resolve('generator_with_name:name_here'))
-    print(injector.resolve('generator_with_name:name_there'))
-
-    @Injector.provider('generator_with_name_and_annotations', name=True)
-    @annotate('answer', unused='error')
-    def generator_with_name_and_annotations(answer, unused=None):
-        try:
-            name = yield 'Hello, {}!'.format(answer)
-            while True:
-                name = yield 'Hello, {}!'.format(name)
-        finally:
-            print('generator_with_name_and_annotations closing')
-
-    print('starting generator_with_name_and_annotations')
-    print(injector.resolve('generator_with_name_and_annotations'))
-    print(injector.resolve('generator_with_name_and_annotations'))
-    print(injector.resolve('generator_with_name_and_annotations:name_here'))
-    print(injector.resolve('generator_with_name_and_annotations:name_there'))
-
-    injector.close()
