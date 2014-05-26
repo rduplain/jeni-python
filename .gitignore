@@ -6,6 +6,7 @@
 .coverage
 data/
 *.db
+/develop
 /dist/
 .DS_Store
 *.egg

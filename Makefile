@@ -6,10 +6,10 @@ all: flakes README.rst smoke
 test: tox-command README.txt
 	@tox
 
-smoke: coverage-command
+smoke: develop coverage-command
 	@coverage erase
 	@coverage run test_jeni.py --failfast
-	@coverage report --show-missing --include=*jeni*
+	@coverage report --show-missing --include=jeni.py,test_jeni.py
 
 flakes: pyflakes-command
 	@pyflakes *.py
@@ -32,8 +32,9 @@ publish-test: README.txt flakes
 # Set a test PYPI_URL for the publish-test target.
 publish-test : PYPI_URL = https://testpypi.python.org/pypi
 
-develop: README.txt
-	python setup.py develop
+develop: README.txt setup.py
+	@python setup.py develop
+	@touch develop
 
 install: README.txt
 	python setup.py install
