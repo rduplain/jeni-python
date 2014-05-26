@@ -40,50 +40,14 @@ to support Python2 and to allow for callables to have multiple annotations.
 Core API
 ========
 
-.. exec:: from jeni import BaseProvider
-.. eval:: insert_doc(BaseProvider)
-
-
-.. exec:: opt = {'ns': 'BaseProvider', 'u': '-'}
-.. eval:: insert_args_doc(BaseProvider.annotate, **opt)
-
-
-.. eval:: insert_args_doc(BaseProvider.apply, **opt)
-
-
-.. eval:: insert_args_doc(BaseProvider.partial, **opt)
-
-
-.. eval:: insert_args_doc(BaseProvider.close, **opt)
-
-
-.. eval:: insert_args_doc(BaseProvider.implement, **opt)
-
-
-.. eval:: insert_args_doc(BaseProvider.extend, **opt)
-
 
 Additional API
 ==============
-
-.. eval:: insert_args_doc(BaseProvider.unannotate, **opt)
-
-
-.. eval:: insert_args_doc(BaseProvider.unimplement, **opt)
-
-
-.. eval:: insert_args_doc(BaseProvider.unextend, **opt)
-
-
-.. eval:: insert_args_doc(BaseProvider.format_accessor_name, **opt)
-
-
-.. eval:: insert_args_doc(BaseProvider.is_close_method, **opt)
 
 
 License
 =======
 
-Copyright (c) 2013 Ron DuPlain <ron.duplain@gmail.com> (see AUTHORS file).
+Copyright 2013-2014 Ron DuPlain <ron.duplain@gmail.com> (see AUTHORS file).
 
 Released under the BSD License (see LICENSE file).

@@ -15,7 +15,7 @@ import sys
 import six
 
 
-# TODO: Update all docstrings and rewrite test_jeni.py.
+# TODO: Update all docstrings, rewrite test_jeni.py, rewrite README.
 
 class UnsetError(LookupError):
     """Note is not able to be provided, as it is currently unset."""
