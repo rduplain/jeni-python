@@ -140,7 +140,7 @@ class Injector(object):
         self.closed = True
 
     def prepare(self, fn):
-        notes, keyword_notes = collect_notes(fn)
+        notes, keyword_notes = get_annotations(fn)
         args, kwargs = self.fulfill(*notes, **keyword_notes)
         return args, kwargs
 
@@ -236,7 +236,7 @@ class Injector(object):
     def init_generator(self, fn):
         provider = self.generator_provider(fn, support_name=fn.support_name)
         if has_annotations(provider.function):
-            notes, keyword_notes = collect_notes(provider.function)
+            notes, keyword_notes = get_annotations(provider.function)
             args, kwargs = self.fulfill(*notes, **keyword_notes)
             value = provider.init(*args, **kwargs)
         else:
@@ -260,30 +260,16 @@ def annotate(*notes, **keyword_notes):
 
 def set_annotations(fn, *notes, **keyword_notes):
     """Set the annotations on the given callable."""
-    # TODO: Do not use __annotations__ since there are no standards.
-    if getattr(fn, '__annotations__', None):
-        raise AttributeError('callable is already annotated: {!r}'.format(fn))
-    check_for_extras(fn, keyword_notes)
-    annotations = {}
-    annotations.update(keyword_notes)
-    args = get_function_arguments(fn)
-    if len(notes) > len(args):
-        msg = '{!r} takes {} arguments, but {} annotations given'
-        raise TypeError(msg.format(fn, len(args), len(notes)))
-    for arg_name, note in zip(args, notes):
-        annotations[arg_name] = note
-    if hasattr(fn, '__func__'):
-        fn.__func__.__annotations__ = annotations
-    else:
-        fn.__annotations__ = annotations
+    if getattr(fn, '__notes__', None):
+        raise AttributeError('callable already has notes: {!r}'.format(fn))
+    fn.__notes__ = (notes, keyword_notes)
 
 
 def get_annotations(fn):
     """Get the annotations of a given callable."""
-    # TODO: Do not use __annotations__ since there are no standards.
-    annotations = getattr(fn, '__annotations__', None)
-    if annotations:
-        return annotations
+    __notes__ = getattr(fn, '__notes__', None)
+    if __notes__:
+        return __notes__
     raise AttributeError('{!r} does not have annotations'.format(fn))
 
 
@@ -294,36 +280,6 @@ def has_annotations(fn):
     except AttributeError:
         return False
     return True
-
-
-def collect_notes(fn):
-    """Format callable's annotations into notes, keyword_notes."""
-    annotations = get_annotations(fn)
-    args, keywords = get_named_positional_keyword_arguments(fn)
-    notes = []
-    keyword_notes = {}
-    for arg in args:
-        try:
-            notes.append(annotations[arg])
-        except KeyError:
-            break
-    for arg in keywords:
-        try:
-            keyword_notes[arg] = annotations[arg]
-        except KeyError:
-            continue
-    return tuple(notes), keyword_notes
-
-
-def check_for_extras(fn, keyword_notes):
-    """Raise TypeError if function has too many keyword annotations."""
-    if supports_extra_keywords(fn):
-        return
-    args = get_function_arguments(fn)
-    for arg in keyword_notes:
-        if arg not in args:
-            msg = "{}() got an unexpected keyword annotation '{}'"
-            raise TypeError(msg.format(fn.__name__, arg))
 
 
 # Inspect utilities allow for manipulation of annotations.
@@ -339,33 +295,3 @@ def class_in_progress(stack=None):
         if statement_list[0].strip().startswith('class '):
             return True
     return False
-
-
-getargspec = getattr(inspect, 'getfullargspec', inspect.getargspec)
-
-
-def get_function_arguments(fn):
-    """Provide function argument names, skipping method's 'self'."""
-    args = getargspec(fn).args
-    if class_in_progress():
-        args = args[1:]
-    if hasattr(fn, '__self__'):
-        args = args[1:]
-    return args
-
-
-def get_named_positional_keyword_arguments(fn):
-    """Provide named (not *, **) positional, keyword arguments of callable."""
-    argspec = getargspec(fn)
-    args = get_function_arguments(fn)
-    keywords = {}
-    for default in reversed(argspec.defaults or []):
-        keywords[args.pop()] = default
-    return tuple(args), keywords
-
-
-def supports_extra_keywords(fn):
-    """True if callable catches unnamed keyword arguments, else False."""
-    if hasattr(inspect, 'getfullargspec'):
-        return inspect.getfullargspec(fn).varkw is not None
-    return inspect.getargspec(fn).keywords is not None
