@@ -20,6 +20,11 @@ def eggs():
     return 'eggs!'
 
 
+@BasicInjector.factory('echo')
+def echo(name=None):
+    return name
+
+
 @BasicInjector.provider('answer')
 def answer():
     yield 42
@@ -74,6 +79,10 @@ class BasicInjectorTestCase(unittest.TestCase):
 
         # This factory does not accept name.
         self.assertRaises(TypeError, self.injector.get, 'eggs:thing')
+
+    def test_factory_with_name(self):
+        self.assertEqual(None, self.injector.get('echo'))
+        self.assertEqual('foo', self.injector.get('echo:foo'))
 
     def test_generator(self):
         self.assertEqual(42, self.injector.get('answer'))
@@ -452,6 +461,56 @@ class TestBrokenProvider(unittest.TestCase):
     def test_subclass_meta(self):
         cls = self.subclass()
         self.assertRaises(TypeError, cls)
+
+
+class TestInjectorProxy(unittest.TestCase):
+    def setUp(self):
+        self.x = jeni.InjectorProxy(BasicInjector())
+
+    def test_getattr(self):
+        self.assertEqual('Hello, world!', self.x.hello)
+        self.assertEqual('Hello, thing!', getattr(self.x, 'hello:thing'))
+
+    def test_unset_getattr(self):
+        def _test():
+            self.x.error
+        self.assertRaises(jeni.UnsetError, _test)
+
+    def test_getitem(self):
+        self.assertEqual('Hello, world!', self.x['hello'])
+        self.assertEqual('Hello, thing!', self.x['hello:thing'])
+
+    def test_unset_getitem(self):
+        def _test():
+            self.x['error']
+        self.assertRaises(jeni.UnsetError, _test)
+
+    def test_in(self):
+        self.assertIn('hello', self.x)
+        self.assertIn('hello:thing', self.x)
+
+    def test_not_in(self):
+        self.assertNotIn('nothing', self.x)
+
+    def test_not_in_when_unset(self):
+        self.assertNotIn('error', self.x)
+        class SubInjector(BasicInjector):
+            pass
+        @SubInjector.factory('picky')
+        def no_spam(name=None):
+            if name and 'spam' in name:
+                raise jeni.UnsetError
+            elif name:
+                return name
+            else:
+                return "I don't like spam!"
+        x = jeni.InjectorProxy(SubInjector())
+        self.assertIn('picky', x)
+        self.assertIn('picky:foo', x)
+        self.assertNotIn('picky:spamspamspam', x)
+
+    def test_class(self):
+        self.assertRaises(TypeError, jeni.InjectorProxy, BasicInjector)
 
 
 class TestClassInProgress(unittest.TestCase):

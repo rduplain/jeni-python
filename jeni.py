@@ -292,6 +292,29 @@ class Injector(object):
     # TODO: enter and exit as method and __method__
 
 
+class InjectorProxy(object):
+    """Forwards getattr & getitem to enclosed injector."""
+
+    def __init__(self, injector):
+        if inspect.isclass(injector):
+            msg = 'takes an instance not a class, {!r}'
+            raise TypeError(msg.format(injector))
+        self.injector = injector
+
+    def __getattr__(self, name):
+        return self.injector.get(name)
+
+    def __getitem__(self, key):
+        return self.injector.get(key)
+
+    def __contains__(self, item):
+        try:
+            self.injector.get(item)
+        except LookupError:
+            return False
+        return True
+
+
 def class_in_progress(stack=None):
     """True if currently inside a class definition, else False."""
     if stack is None:
