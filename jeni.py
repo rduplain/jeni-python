@@ -24,10 +24,10 @@ class UnsetError(LookupError):
         super(UnsetError, self).__init__(*a, **kw)
 
 
-# Motivation: dependency injection using prepared providers.
-
 @six.add_metaclass(abc.ABCMeta)
 class Provider(object):
+    """Provide a single prepared dependency."""
+
     @abc.abstractmethod
     def get(self, name=None):
         "Implement in sub-class."
@@ -294,7 +294,6 @@ class Injector(object):
 
 
 
-# Inspect utilities allow for manipulation of annotations.
 
 def class_in_progress(stack=None):
     """True if currently inside a class definition, else False."""
