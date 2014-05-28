@@ -83,12 +83,59 @@ class GeneratorProvider(Provider):
             raise RuntimeError(msg.format(self.function))
 
 
+class Annotator(object):
+    """Annotate callables. Intended to be stateless dict of function pointers.
+
+    Annotations on callables are data for jeni's injection.
+    Built as a class to embed annotation helpers and support customization.
+    """
+
+    # TODO: Support base-case to opt-in a function annotated in Python 3.
+    # TODO: Support annotation to inject partial.
+
+    def __call__(self, *notes, **keyword_notes):
+        """Decorator-maker to annotate a given callable."""
+        def decorator(fn):
+            self.set_annotations(fn, *notes, **keyword_notes)
+            return fn
+        return decorator
+
+    def get_annotations(self, fn):
+        """Get the annotations of a given callable."""
+        __notes__ = getattr(fn, '__notes__', None)
+        if __notes__:
+            return __notes__
+        raise AttributeError('{!r} does not have annotations'.format(fn))
+
+    def set_annotations(self, fn, *notes, **keyword_notes):
+        """Set the annotations on the given callable."""
+        if getattr(fn, '__notes__', None):
+            raise AttributeError('callable already has notes: {!r}'.format(fn))
+        fn.__notes__ = (notes, keyword_notes)
+
+    def has_annotations(self, fn):
+        """True if callable is annotated, else False."""
+        try:
+            self.get_annotations(fn)
+        except AttributeError:
+            return False
+        return True
+
+annotate = Annotator()
+
+
 class Injector(object):
     """Collects dependencies and reads annotations to fulfill them."""
+    annotator_class = Annotator
     generator_provider = GeneratorProvider
     re_note = re.compile(r'^(.*?)(?::(.*))?$') # annotation is 'object:name'
 
     def __init__(self):
+        annotator = self.annotator_class()
+        self.get_annotations = annotator.get_annotations
+        self.set_annotations = annotator.set_annotations
+        self.has_annotations = annotator.has_annotations
+
         self.closed = False
         self.instances = {}
         self.values = {}
@@ -140,7 +187,7 @@ class Injector(object):
         self.closed = True
 
     def prepare(self, fn):
-        notes, keyword_notes = get_annotations(fn)
+        notes, keyword_notes = self.get_annotations(fn)
         args, kwargs = self.fulfill(*notes, **keyword_notes)
         return args, kwargs
 
@@ -185,7 +232,7 @@ class Injector(object):
             fn = provider_or_fn.get
         else:
             fn = provider_or_fn
-        if has_annotations(fn):
+        if self.has_annotations(fn):
             fn = self.partial(fn)
         try:
             if name is None:
@@ -235,8 +282,8 @@ class Injector(object):
 
     def init_generator(self, fn):
         provider = self.generator_provider(fn, support_name=fn.support_name)
-        if has_annotations(provider.function):
-            notes, keyword_notes = get_annotations(provider.function)
+        if self.has_annotations(provider.function):
+            notes, keyword_notes = self.get_annotations(provider.function)
             args, kwargs = self.fulfill(*notes, **keyword_notes)
             value = provider.init(*args, **kwargs)
         else:
@@ -245,41 +292,6 @@ class Injector(object):
 
     # TODO: enter and exit as method and __method__
 
-
-# Annotations provide key data for jeni's injection.
-
-def annotate(*notes, **keyword_notes):
-    """Decorator-maker to annotate a given callable."""
-    # TODO: Support base-case to opt-in a function annotated in Python 3.
-    # TODO: Support annotation to inject partial.
-    def decorator(fn):
-        set_annotations(fn, *notes, **keyword_notes)
-        return fn
-    return decorator
-
-
-def set_annotations(fn, *notes, **keyword_notes):
-    """Set the annotations on the given callable."""
-    if getattr(fn, '__notes__', None):
-        raise AttributeError('callable already has notes: {!r}'.format(fn))
-    fn.__notes__ = (notes, keyword_notes)
-
-
-def get_annotations(fn):
-    """Get the annotations of a given callable."""
-    __notes__ = getattr(fn, '__notes__', None)
-    if __notes__:
-        return __notes__
-    raise AttributeError('{!r} does not have annotations'.format(fn))
-
-
-def has_annotations(fn):
-    """True if callable is annotated, else False."""
-    try:
-        get_annotations(fn)
-    except AttributeError:
-        return False
-    return True
 
 
 # Inspect utilities allow for manipulation of annotations.
