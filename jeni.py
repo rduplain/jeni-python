@@ -38,6 +38,9 @@ class Provider(object):
 
 class GeneratorProvider(Provider):
     def __init__(self, function, support_name=False):
+        if not inspect.isgeneratorfunction(function):
+            msg = '{!r} is not a generator function'
+            raise TypeError(msg.format(function))
         self.function = function
         self.support_name = support_name
         self.initialized = False

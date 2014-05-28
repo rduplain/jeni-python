@@ -356,9 +356,13 @@ class TestGeneratorProvider(unittest.TestCase):
         self.assertEqual(42, provider.get())
         self.assertRaises(TypeError, provider.get, name='name')
 
-    def test_init_error(self):
+    def test_construction_error(self):
         def fn():
-            "unused"
+            "not a generator"
+        self.assertRaises(TypeError, jeni.GeneratorProvider, fn)
+
+    def test_init_error(self):
+        def fn(): yield
         provider = jeni.GeneratorProvider(fn)
         self.assertRaises(RuntimeError, provider.get)
         self.assertRaises(RuntimeError, provider.close)
