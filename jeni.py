@@ -289,7 +289,23 @@ class Injector(object):
             value = provider.init()
         return provider, value
 
-    # TODO: enter and exit as method and __method__
+    def __enter__(self):
+        return self
+
+    def enter(self):
+        """Enter context-manager without with-block. See also: `exit`.
+
+        Useful for before- and after-hooks which cannot use a with-block.
+        """
+        return self.__enter__()
+
+    def __exit__(self, exc_type, exc_value, traceback):
+        self.close()
+
+    def exit(self):
+        """Exit context-manager without with-block. See also: `enter`."""
+        return self.__exit__(None, None, None)
+
 
 
 class InjectorProxy(object):

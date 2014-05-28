@@ -331,6 +331,21 @@ class ClosingTestCase(unittest.TestCase):
         self.assert_with_note('via_generator_with_name:name')
 
 
+class ContextManagerTestCase(unittest.TestCase):
+    def test_with_block(self):
+        with CloseTestInjector() as injector:
+            thing = injector.get('via_class')
+            self.assertEqual(False, thing.closed)
+        self.assertEqual(True, thing.closed)
+
+    def test_enter_exit(self):
+        injector = CloseTestInjector().enter()
+        thing = injector.get('via_class')
+        self.assertEqual(False, thing.closed)
+        injector.exit()
+        self.assertEqual(True, thing.closed)
+
+
 class TestGeneratorProvider(unittest.TestCase):
     def test_generator(self):
         def fn():
