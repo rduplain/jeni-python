@@ -63,54 +63,54 @@ class BasicInjectorTestCase(unittest.TestCase):
         self.injector = BasicInjector()
 
     def test_provider_class(self):
-        self.assertEqual('Hello, world!', self.injector.resolve('hello'))
-        self.assertEqual('Hello, world!', self.injector.resolve('hello'))
-        self.assertEqual('Hello, thing!', self.injector.resolve('hello:thing'))
-        self.assertEqual('Hello, thing!', self.injector.resolve('hello:thing'))
+        self.assertEqual('Hello, world!', self.injector.get('hello'))
+        self.assertEqual('Hello, world!', self.injector.get('hello'))
+        self.assertEqual('Hello, thing!', self.injector.get('hello:thing'))
+        self.assertEqual('Hello, thing!', self.injector.get('hello:thing'))
 
     def test_factory(self):
-        self.assertEqual('eggs!', self.injector.resolve('eggs'))
-        self.assertEqual('eggs!', self.injector.resolve('eggs'))
+        self.assertEqual('eggs!', self.injector.get('eggs'))
+        self.assertEqual('eggs!', self.injector.get('eggs'))
 
         # This factory does not accept name.
-        self.assertRaises(TypeError, self.injector.resolve, 'eggs:thing')
+        self.assertRaises(TypeError, self.injector.get, 'eggs:thing')
 
     def test_generator(self):
-        self.assertEqual(42, self.injector.resolve('answer'))
-        self.assertEqual(42, self.injector.resolve('answer'))
+        self.assertEqual(42, self.injector.get('answer'))
+        self.assertEqual(42, self.injector.get('answer'))
 
         # This generator does not accept name.
-        self.assertRaises(TypeError, self.injector.resolve, 'answer:thing')
+        self.assertRaises(TypeError, self.injector.get, 'answer:thing')
 
     def test_generator_with_name(self):
-        self.assertEqual('spam', self.injector.resolve('spam'))
-        self.assertEqual('spam', self.injector.resolve('spam'))
-        self.assertEqual('spamspam', self.injector.resolve('spam:2'))
-        self.assertEqual('spamspamspam', self.injector.resolve('spam:3'))
-        self.assertEqual('spamspamspamspam', self.injector.resolve('spam:4'))
-        self.assertEqual('spam', self.injector.resolve('spam'))
+        self.assertEqual('spam', self.injector.get('spam'))
+        self.assertEqual('spam', self.injector.get('spam'))
+        self.assertEqual('spamspam', self.injector.get('spam:2'))
+        self.assertEqual('spamspamspam', self.injector.get('spam:3'))
+        self.assertEqual('spamspamspamspam', self.injector.get('spam:4'))
+        self.assertEqual('spam', self.injector.get('spam'))
 
-        self.assertRaises(ValueError, self.injector.resolve, 'spam:forty')
-        self.assertEqual('spam', self.injector.resolve('spam'))
+        self.assertRaises(ValueError, self.injector.get, 'spam:forty')
+        self.assertEqual('spam', self.injector.get('spam'))
 
     def test_not_registered(self):
-        self.assertRaises(LookupError, self.injector.resolve, 'nothing')
+        self.assertRaises(LookupError, self.injector.get, 'nothing')
 
     def test_provider_class_registration(self):
         class SubInjector(BasicInjector):
             pass
         SubInjector.provider('hello2', HelloProvider)
         injector = SubInjector()
-        self.assertEqual('Hello, world!', injector.resolve('hello2'))
-        self.assertEqual('Hello, world!', injector.resolve('hello'))
+        self.assertEqual('Hello, world!', injector.get('hello2'))
+        self.assertEqual('Hello, world!', injector.get('hello'))
 
     def test_factory_registration(self):
         class SubInjector(BasicInjector):
             pass
         SubInjector.factory('eggs2', eggs)
         injector = SubInjector()
-        self.assertEqual('eggs!', injector.resolve('eggs2'))
-        self.assertEqual('eggs!', injector.resolve('eggs'))
+        self.assertEqual('eggs!', injector.get('eggs2'))
+        self.assertEqual('eggs!', injector.get('eggs'))
 
 
 class SubInjectorTestCase(BasicInjectorTestCase):
@@ -118,11 +118,11 @@ class SubInjectorTestCase(BasicInjectorTestCase):
         self.injector = SubInjector()
 
     def test_generator(self):
-        self.assertEqual('No one knows.', self.injector.resolve('answer'))
-        self.assertEqual('No one knows.', self.injector.resolve('answer'))
+        self.assertEqual('No one knows.', self.injector.get('answer'))
+        self.assertEqual('No one knows.', self.injector.get('answer'))
 
         # This generator does not accept name.
-        self.assertRaises(TypeError, self.injector.resolve, 'answer:thing')
+        self.assertRaises(TypeError, self.injector.get, 'answer:thing')
 
 
 class BasicInjectorAnnotationTestCase(unittest.TestCase):
@@ -202,8 +202,8 @@ class AnnotatedProviderTestCase(unittest.TestCase):
             pass
         Injector.factory('dish', spam_eggs)
         injector = Injector()
-        self.assertEqual(('spam eggs!'), injector.resolve('dish'))
-        self.assertEqual(('spam eggs! eel'), injector.resolve('dish:eel'))
+        self.assertEqual(('spam eggs!'), injector.get('dish'))
+        self.assertEqual(('spam eggs! eel'), injector.get('dish:eel'))
 
     def test_annotated_generator(self):
         class Injector(BasicInjector):
@@ -213,7 +213,7 @@ class AnnotatedProviderTestCase(unittest.TestCase):
         def generator(spam):
             yield spam
         injector = Injector()
-        self.assertEqual('spam', injector.resolve('spammish'))
+        self.assertEqual('spam', injector.get('spammish'))
 
 
 @BasicInjector.factory('error')
@@ -303,8 +303,8 @@ class ClosingTestCase(unittest.TestCase):
         self.assertRaises(RuntimeError, self.injector.close)
 
     def assert_with_note(self, note):
-        thing = self.injector.resolve(note)
-        self.assertIs(thing, self.injector.resolve(note))
+        thing = self.injector.get(note)
+        self.assertIs(thing, self.injector.get(note))
         self.assertEqual(False, thing.closed)
         self.injector.close()
         self.assertEqual(True, thing.closed)
@@ -382,12 +382,12 @@ class NonStringNoteTestCase(unittest.TestCase):
     def test_object(self):
         note = object()
         self.Injector.provider(note, HelloProvider)
-        self.assertEqual('Hello, world!', self.injector.resolve(note))
+        self.assertEqual('Hello, world!', self.injector.get(note))
 
     def test_tuple(self):
         note = ('hello', 'name')
         self.Injector.provider(note, HelloProvider)
-        self.assertEqual('Hello, name!', self.injector.resolve(note))
+        self.assertEqual('Hello, name!', self.injector.get(note))
 
     def test_tuple_too_small(self):
         note = ('hello',)

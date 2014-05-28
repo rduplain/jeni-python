@@ -125,7 +125,7 @@ annotate = Annotator()
 
 
 class Injector(object):
-    """Collects dependencies and reads annotations to fulfill them."""
+    """Collects dependencies and reads annotations to inject them."""
     annotator_class = Annotator
     generator_provider = GeneratorProvider
     re_note = re.compile(r'^(.*?)(?::(.*))?$') # annotation is 'object:name'
@@ -170,41 +170,14 @@ class Injector(object):
             return decorator
 
     def apply(self, fn):
-        args, kwargs = self.prepare(fn)
+        args, kwargs = self.prepare_callable(fn)
         return fn(*args, **kwargs)
 
     def partial(self, fn):
-        args, kwargs = self.prepare(fn)
+        args, kwargs = self.prepare_callable(fn)
         return functools.partial(fn, *args, **kwargs)
 
-    def close(self):
-        # TODO: have an opinion about order of closed
-        # TODO: keeping counts on tokens resolved, not just bool, would be nice
-        if self.closed:
-            raise RuntimeError('{!r} already closed'.format(self))
-        for provider in self.instances.values():
-            provider.close()
-        self.closed = True
-
-    def prepare(self, fn):
-        notes, keyword_notes = self.get_annotations(fn)
-        args, kwargs = self.fulfill(*notes, **keyword_notes)
-        return args, kwargs
-
-    def fulfill(self, *notes, **keyword_notes):
-        """Fulfill injection during function application."""
-        args = tuple(self.resolve(note) for note in notes)
-        kwargs = {}
-        for arg in keyword_notes:
-            # TODO: Maybe.
-            note = keyword_notes[arg]
-            try:
-                kwargs[arg] = self.resolve(note)
-            except UnsetError:
-                continue
-        return args, kwargs
-
-    def resolve(self, note):
+    def get(self, note):
         """Resolve a single note into an object."""
         basenote, name = self.parse_note(note)
         if name is None and basenote in self.values:
@@ -215,6 +188,46 @@ class Injector(object):
             msg = "Unable to resolve '{}'"
             raise LookupError(msg.format(note))
         return self.handle_provider(provider_or_fn, note, basenote, name=name)
+
+    def close(self):
+        # TODO: have an opinion about order of closed
+        # TODO: keeping counts on tokens resolved, not just bool, would be nice
+        if self.closed:
+            raise RuntimeError('{!r} already closed'.format(self))
+        for provider in self.instances.values():
+            provider.close()
+        self.closed = True
+
+    def prepare_callable(self, fn):
+        notes, keyword_notes = self.get_annotations(fn)
+        args, kwargs = self.prepare_notes(*notes, **keyword_notes)
+        return args, kwargs
+
+    def prepare_notes(self, *notes, **keyword_notes):
+        args = tuple(self.get(note) for note in notes)
+        kwargs = {}
+        for arg in keyword_notes:
+            # TODO: Maybe.
+            note = keyword_notes[arg]
+            try:
+                kwargs[arg] = self.get(note)
+            except UnsetError:
+                continue
+        return args, kwargs
+
+    @classmethod
+    def parse_note(cls, note):
+        """Parse string annotation into object reference with optional name."""
+        if isinstance(note, tuple):
+            if len(note) != 2:
+                raise ValueError('tuple annotations must be length 2')
+            return note
+        try:
+            match = cls.re_note.match(note)
+        except TypeError:
+            # Note is not a string. Support any Python object as a note.
+            return note, None
+        return match.groups()
 
     def handle_provider(self, provider_or_fn, note, basenote, name=None):
         if basenote in self.instances:
@@ -247,20 +260,6 @@ class Injector(object):
             six.reraise(exc_type, exc_value, tb)
 
     @classmethod
-    def parse_note(cls, note):
-        """Parse string annotation into object reference with optional name."""
-        if isinstance(note, tuple):
-            if len(note) != 2:
-                raise ValueError('tuple annotations must be length 2')
-            return note
-        try:
-            match = cls.re_note.match(note)
-        except TypeError:
-            # Note is not a string. Support any Python object as a note.
-            return note, None
-        return match.groups()
-
-    @classmethod
     def register(cls, note, provider):
         basenote, name = cls.parse_note(note)
         if 'provider_registry' not in vars(cls):
@@ -284,15 +283,13 @@ class Injector(object):
         provider = self.generator_provider(fn, support_name=fn.support_name)
         if self.has_annotations(provider.function):
             notes, keyword_notes = self.get_annotations(provider.function)
-            args, kwargs = self.fulfill(*notes, **keyword_notes)
+            args, kwargs = self.prepare_notes(*notes, **keyword_notes)
             value = provider.init(*args, **kwargs)
         else:
             value = provider.init()
         return provider, value
 
     # TODO: enter and exit as method and __method__
-
-
 
 
 def class_in_progress(stack=None):
