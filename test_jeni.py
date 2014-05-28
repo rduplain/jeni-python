@@ -441,7 +441,6 @@ class MoreAnnotationTests(unittest.TestCase):
         x = X()
         self.assertEqual('spameggs!', injector.apply(x.eat))
 
-    @unittest.skip('TODO: classmethod support')
     def test_classmethod_annotation(self):
         class X(object):
             @jeni.annotate('spam', 'eggs')

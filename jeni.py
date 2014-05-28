@@ -100,16 +100,23 @@ class Annotator(object):
             return fn
         return decorator
 
+    # When getting or setting annotations, check callable for __func__. If
+    # found, the callable is a method, and the __func__ as function object
+    # should be used instead.
+
     def get_annotations(self, fn):
         """Get the annotations of a given callable."""
-        __notes__ = getattr(fn, '__notes__', None)
-        if __notes__:
-            return __notes__
+        if hasattr(fn, '__func__'):
+            fn = fn.__func__
+        if hasattr(fn, '__notes__'):
+            return fn.__notes__
         raise AttributeError('{!r} does not have annotations'.format(fn))
 
     def set_annotations(self, fn, *notes, **keyword_notes):
         """Set the annotations on the given callable."""
-        if getattr(fn, '__notes__', None):
+        if hasattr(fn, '__func__'):
+            fn = fn.__func__
+        if hasattr(fn, '__notes__'):
             raise AttributeError('callable already has notes: {!r}'.format(fn))
         fn.__notes__ = (notes, keyword_notes)
 
