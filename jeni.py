@@ -309,7 +309,7 @@ class Injector(object):
         except LookupError:
             msg = "Unable to resolve '{}'"
             raise LookupError(msg.format(note))
-        return self.handle_provider(provider_or_fn, note, basenote, name=name)
+        return self.handle_provider(provider_or_fn, note)
 
     def close(self):
         """Close injector & injected Provider instances, including generators.
@@ -360,8 +360,9 @@ class Injector(object):
             return note, None
         return match.groups()
 
-    def handle_provider(self, provider_or_fn, note, basenote, name=None):
+    def handle_provider(self, provider_or_fn, note):
         """Get value from provider as requested by note."""
+        basenote, name = self.parse_note(note)
         if basenote in self.instances:
             provider_or_fn = self.instances[basenote]
         elif inspect.isclass(provider_or_fn):
