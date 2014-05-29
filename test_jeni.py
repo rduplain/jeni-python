@@ -32,12 +32,9 @@ def answer():
 
 @BasicInjector.provider('spam', name=True)
 def spam():
-    try:
-        count_str = yield 'spam'
-        while True:
-            count_str = yield 'spam' * int(count_str)
-    finally:
-        pass
+    count_str = yield 'spam'
+    while True:
+        count_str = yield 'spam' * int(count_str)
 
 
 class SubInjector(BasicInjector):

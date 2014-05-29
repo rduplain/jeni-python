@@ -15,8 +15,6 @@ import sys
 import six
 
 
-# TODO: Update all docstrings, rewrite README.
-
 class UnsetError(LookupError):
     """Note is not able to be provided, as it is currently unset."""
     def __init__(self, *a, **kw):
@@ -30,14 +28,28 @@ class Provider(object):
 
     @abc.abstractmethod
     def get(self, name=None):
-        "Implement in sub-class."
+        """Implement in subclass."""
 
     def close(self):
-        "By default, does nothing."
+        """By default, does nothing. Close objects as needed in subclass."""
 
 
 class GeneratorProvider(Provider):
+    """Manage generator lifecycle to implement Provider interface.
+
+    `Injector` uses this class to support registering generators.
+    When used directly, note that method `init` must be called before `get`::
+
+        def generator(foo, bar):
+            yield
+            # continues when GeneratorProvider.close is called.
+        provider = GeneratorProvider(generator)
+        provider.init('foo', 'bar')
+        provider.get()
+    """
+
     def __init__(self, function, support_name=False):
+        """Accept generator function & whether generator supports send."""
         if not inspect.isgeneratorfunction(function):
             msg = '{!r} is not a generator function'
             raise TypeError(msg.format(function))
@@ -46,6 +58,7 @@ class GeneratorProvider(Provider):
         self.initialized = False
 
     def init(self, *a, **kw):
+        """Call function to create generator, passing arguments provided."""
         self.generator = self.function(*a, **kw)
         try:
             self.init_value = next(self.generator)
@@ -57,6 +70,7 @@ class GeneratorProvider(Provider):
             return self.init_value
 
     def get(self, name=None):
+        """Get initial yield value, or result of send(name) if name given."""
         if not self.initialized:
             msg = '{!r} not initialized; call `init` before `get`.'
             raise RuntimeError(msg.format(self))
@@ -73,6 +87,7 @@ class GeneratorProvider(Provider):
         return value
 
     def close(self):
+        """Close the generator."""
         if not self.initialized:
             raise RuntimeError('{!r} not initialized'.format(self))
         if self.support_name:
@@ -97,7 +112,34 @@ class Annotator(object):
     # TODO: Support annotation to inject partial.
 
     def __call__(self, *notes, **keyword_notes):
-        """Decorator-maker to annotate a given callable."""
+        """Annotate a callable with a decorator to provide data for Injectors.
+
+        Intended use::
+
+            from jeni import annotate
+
+            @annotate('foo', 'bar')
+            def function(foo, bar):
+                return
+
+        An `Injector` would then need to register providers for 'foo' and 'bar'
+        in order to apply this function; an injector with such providers can
+        apply the annotated function without any further information::
+
+            injector.apply(function)
+
+        To get a partially applied function, to call later::
+
+            fn = injector.partial(function)
+            fn()
+
+        Annotation does not alter the callable's default behavior.
+        Call it normally::
+
+            foo, bar = 'foo', 'bar'
+            function(foo, bar)
+
+        """
         def decorator(fn):
             self.set_annotations(fn, *notes, **keyword_notes)
             return fn
@@ -141,6 +183,21 @@ class Injector(object):
     re_note = re.compile(r'^(.*?)(?::(.*))?$') # annotation is 'object:name'
 
     def __init__(self):
+        """An Injector could take arguments to init, but this base does not.
+
+        An Injector subclass inherits the provider registry of its base
+        classes, but can override any provider by re-registering notes. When
+        organizing a project, create an Injector subclass to serve as the
+        object to register all providers. This allows for the project to have
+        its own namespace of registered dependencies. This registry can be
+        customized by further subclasses, either for injecting mocks in testing
+        or providing alternative dependencies in a different runtime::
+
+            from jeni import Injector as BaseInjector
+
+            class Injector(BaseInjector):
+                "Subclass provides namespace when registering providers."
+        """
         annotator = self.annotator_class()
         self.get_annotations = annotator.get_annotations
         self.set_annotations = annotator.set_annotations
@@ -152,6 +209,41 @@ class Injector(object):
 
     @classmethod
     def provider(cls, note, provider=None, name=False):
+        """Register a provider, either a Provider class or a generator.
+
+        Provider class::
+
+            from jeni import Injector as BaseInjector
+            from jeni import Provider
+
+            class Injector(BaseInjector):
+                pass
+
+            @Injector.provider('hello')
+            class HelloProvider(Provider):
+                def get(self, name=None):
+                    if name is None:
+                        name = 'world'
+                    return 'Hello, {}!'.format(name)
+
+        Simple generator::
+
+            @Injector.provider('answer')
+            def answer():
+                yield 42
+
+        If a generator supports get with a name argument::
+
+            @Injector.provider('spam', name=True)
+            def spam():
+                count_str = yield 'spam'
+                while True:
+                    count_str = yield 'spam' * int(count_str)
+
+        Registration can be a decorator or a direct method call::
+
+            Injector.provider('hello', HelloProvider)
+        """
         def decorator(fn_or_class):
             if inspect.isgeneratorfunction(fn_or_class):
                 fn = fn_or_class
@@ -171,6 +263,24 @@ class Injector(object):
 
     @classmethod
     def factory(cls, note, fn=None):
+        """Register a function as a provider.
+
+        Function (name support is optional)::
+
+            from jeni import Injector as BaseInjector
+            from jeni import Provider
+
+            class Injector(BaseInjector):
+                pass
+
+            @Injector.factory('echo')
+            def echo(name=None):
+                return name
+
+        Registration can be a decorator or a direct method call::
+
+            Injector.factory('echo', echo)
+        """
         if fn is not None:
             cls.register(note, fn)
         else:
@@ -180,10 +290,12 @@ class Injector(object):
             return decorator
 
     def apply(self, fn):
+        """Fully apply annotated callable, returning callable's result."""
         args, kwargs = self.prepare_callable(fn)
         return fn(*args, **kwargs)
 
     def partial(self, fn):
+        """Partially apply annotated callable, returning a partial function."""
         args, kwargs = self.prepare_callable(fn)
         return functools.partial(fn, *args, **kwargs)
 
@@ -200,6 +312,13 @@ class Injector(object):
         return self.handle_provider(provider_or_fn, note, basenote, name=name)
 
     def close(self):
+        """Close injector & injected Provider instances, including generators.
+
+        Provider close methods should not intentionally raise errors.
+        Specifically, if a dependency has transactions, the transaction should
+        be committed or rolled back before close is called, and not left as an
+        operation to be called during the close phase.
+        """
         # TODO: have an opinion about order of closed
         # TODO: keeping counts on tokens resolved, not just bool, would be nice
         if self.closed:
@@ -209,11 +328,13 @@ class Injector(object):
         self.closed = True
 
     def prepare_callable(self, fn):
+        """Prepare arguments required to apply function."""
         notes, keyword_notes = self.get_annotations(fn)
         args, kwargs = self.prepare_notes(*notes, **keyword_notes)
         return args, kwargs
 
     def prepare_notes(self, *notes, **keyword_notes):
+        """Get injection values for all given notes."""
         args = tuple(self.get(note) for note in notes)
         kwargs = {}
         for arg in keyword_notes:
@@ -240,6 +361,7 @@ class Injector(object):
         return match.groups()
 
     def handle_provider(self, provider_or_fn, note, basenote, name=None):
+        """Get value from provider as requested by note."""
         if basenote in self.instances:
             provider_or_fn = self.instances[basenote]
         elif inspect.isclass(provider_or_fn):
@@ -271,6 +393,7 @@ class Injector(object):
 
     @classmethod
     def register(cls, note, provider):
+        """Implementation to register provider via `provider` & `factory`."""
         basenote, name = cls.parse_note(note)
         if 'provider_registry' not in vars(cls):
             cls.provider_registry = {}
@@ -290,6 +413,7 @@ class Injector(object):
         raise LookupError(repr(basenote))
 
     def init_generator(self, fn):
+        """Implementation to initialize generator providers."""
         provider = self.generator_provider(fn, support_name=fn.support_name)
         if self.has_annotations(provider.function):
             notes, keyword_notes = self.get_annotations(provider.function)
@@ -300,6 +424,7 @@ class Injector(object):
         return provider, value
 
     def __enter__(self):
+        """Support for context manager, returning self."""
         return self
 
     def enter(self):
@@ -310,6 +435,7 @@ class Injector(object):
         return self.__enter__()
 
     def __exit__(self, exc_type, exc_value, traceback):
+        """Support for context manager, close on exit."""
         self.close()
 
     def exit(self):
@@ -317,9 +443,19 @@ class Injector(object):
         return self.__exit__(None, None, None)
 
 
-
 class InjectorProxy(object):
-    """Forwards getattr & getitem to enclosed injector."""
+    """Forwards getattr & getitem to enclosed injector.
+
+    If an injector has 'hello' registered::
+
+        from jeni import InjectorProxy
+        deps = InjectorProxy(injector)
+        deps.hello
+
+    Get by name can use dict-style access::
+
+        deps['hello:name']
+    """
 
     def __init__(self, injector):
         if inspect.isclass(injector):

@@ -1,7 +1,7 @@
 PYPI_URL = https://pypi.python.org/pypi
 tarball = `ls -1rt ./dist/*.tar* | tail -1`
 
-all: flakes README.rst smoke
+all: flakes smoke README.rst
 
 test: tox-command README.txt
 	@tox
@@ -53,6 +53,9 @@ README.rst: README.rst.in jeni.py bin/build_rst.py
 README.txt: README.rst.in jeni.py bin/build_rst.py
 	@python bin/build_rst.py README.rst.in > $@
 
+README.html: README.rst rst2html-command
+	@rst2html README.rst > README.html
+
 tox-command: virtualenv
 	@which tox >/dev/null 2>&1 || pip install tox
 
@@ -61,6 +64,9 @@ coverage-command: virtualenv
 
 pyflakes-command: virtualenv
 	@which pyflakes >/dev/null 2>&1 || pip install pyflakes
+
+rst2html-command: virtualenv
+	@which rst2html >/dev/null 2>&1 || pip install docutils
 
 virtualenv: .in_virtualenv.py
 	@python $<

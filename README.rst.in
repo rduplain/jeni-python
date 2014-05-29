@@ -7,13 +7,9 @@
 Overview
 ========
 
-1. Define a set of dependencies that your system uses.
+1. Configure dependencies that your system uses.
 2. Give your code natural call interfaces accepting those dependencies.
-3. Implement a **Provider** which can fulfill those dependencies in one call.
-
-This is **dependency aggregation**. Gather your dependencies into namespaces,
-use those namespaces to annotate callables, then implement those namespaces for
-the various contexts in which your application will need to run.
+3. Implement a **Provider** for each dependency, register with an **Injector**.
 
 jeni runs on Python 2.7, Python 3.2, Python 3.3, and pypy.
 
@@ -27,22 +23,72 @@ more than just testing. This lets you write composable utilities.
 
 jeni's design principle is to have all annotated callables usable in a context
 that knows nothing about jeni. Any callable is as relevant to a fresh Python
-REPL as it is to a Provider.
+REPL as it is to an injector.
 
 
 Annotations
 ===========
 
-Annotations are implemented as decorators and not Python3 annotations in order
-to support Python2 and to allow for callables to have multiple annotations.
+Annotations are implemented as decorators for Python2.
 
 
 Core API
 ========
 
+.. exec:: from jeni import Annotator, annotate
+.. eval:: insert_doc(Annotator.__call__, name='annotate')
+
+
+.. exec:: from jeni import Injector
+.. eval:: insert_doc(Injector)
+
+
+.. exec:: opt = {'ns': 'Injector', 'u': '-'}
+.. eval:: insert_args_doc(Injector.__init__, **opt)
+
+
+.. eval:: insert_args_doc(Injector.provider, **opt)
+
+
+.. eval:: insert_args_doc(Injector.factory, **opt)
+
+
+.. eval:: insert_args_doc(Injector.apply, **opt)
+
+
+.. eval:: insert_args_doc(Injector.partial, **opt)
+
+
+.. eval:: insert_args_doc(Injector.get, **opt)
+
+
+.. eval:: insert_args_doc(Injector.close, **opt)
+
+
+.. eval:: insert_args_doc(Injector.enter, **opt)
+
+
+.. eval:: insert_args_doc(Injector.exit, **opt)
+
+
+.. exec:: from jeni import Provider
+.. eval:: insert_doc(Provider)
+
+
+.. exec:: opt = {'ns': 'Provider', 'u': '-'}
+.. eval:: insert_args_doc(Provider.get, **opt)
+
+
+.. eval:: insert_args_doc(Provider.close, **opt)
+
+
 
 Additional API
 ==============
+
+.. exec:: from jeni import InjectorProxy
+.. eval:: insert_doc(InjectorProxy)
+
 
 
 License

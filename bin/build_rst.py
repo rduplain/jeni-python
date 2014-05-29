@@ -18,12 +18,13 @@ doc = """``{name}``
 {doc}
 """
 
-def insert_doc(obj, u='-'):
-    name = obj.__name__
+def insert_doc(obj, u='-', name=None):
+    if name is None:
+        name = obj.__name__
     return doc.format(
         name=name,
         underline=u*(len(name)+4),
-        doc=inspect.getdoc(obj))
+        doc=inspect.getdoc(obj) or '')
 
 
 args_doc = """``{name}{argspec}``
@@ -32,18 +33,18 @@ args_doc = """``{name}{argspec}``
 {doc}
 """
 
-def insert_args_doc(obj, u='-', ns=None):
+def insert_args_doc(obj, u='-', ns=None, name=None):
     spec = inspect.getargspec(obj)
-    if ns is None:
+    if name is None:
         name = obj.__name__
-    else:
-        name = '{}.{}'.format(ns, obj.__name__)
+    if ns is not None:
+        name = '{}.{}'.format(ns, name)
     argspec = inspect.formatargspec(*spec)
     return args_doc.format(
         name=name,
         underline=u*(len(name+argspec)+4),
         argspec=argspec,
-        doc=inspect.getdoc(obj))
+        doc=inspect.getdoc(obj) or '')
 
 
 def process(filename, warning=os.environ.get('RST_WARNING', None)):

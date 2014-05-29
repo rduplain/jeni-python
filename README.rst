@@ -9,13 +9,9 @@
 Overview
 ========
 
-1. Define a set of dependencies that your system uses.
+1. Configure dependencies that your system uses.
 2. Give your code natural call interfaces accepting those dependencies.
-3. Implement a **Provider** which can fulfill those dependencies in one call.
-
-This is **dependency aggregation**. Gather your dependencies into namespaces,
-use those namespaces to annotate callables, then implement those namespaces for
-the various contexts in which your application will need to run.
+3. Implement a **Provider** for each dependency, register with an **Injector**.
 
 jeni runs on Python 2.7, Python 3.2, Python 3.3, and pypy.
 
@@ -29,22 +25,215 @@ more than just testing. This lets you write composable utilities.
 
 jeni's design principle is to have all annotated callables usable in a context
 that knows nothing about jeni. Any callable is as relevant to a fresh Python
-REPL as it is to a Provider.
+REPL as it is to an injector.
 
 
 Annotations
 ===========
 
-Annotations are implemented as decorators and not Python3 annotations in order
-to support Python2 and to allow for callables to have multiple annotations.
+Annotations are implemented as decorators for Python2.
 
 
 Core API
 ========
 
+``annotate``
+------------
+
+Annotate a callable with a decorator to provide data for Injectors.
+
+Intended use::
+
+    from jeni import annotate
+
+    @annotate('foo', 'bar')
+    def function(foo, bar):
+        return
+
+An `Injector` would then need to register providers for 'foo' and 'bar'
+in order to apply this function; an injector with such providers can
+apply the annotated function without any further information::
+
+    injector.apply(function)
+
+To get a partially applied function, to call later::
+
+    fn = injector.partial(function)
+    fn()
+
+Annotation does not alter the callable's default behavior.
+Call it normally::
+
+    foo, bar = 'foo', 'bar'
+    function(foo, bar)
+
+
+``Injector``
+------------
+
+Collects dependencies and reads annotations to inject them.
+
+
+``Injector.__init__(self)``
+---------------------------
+
+An Injector could take arguments to init, but this base does not.
+
+An Injector subclass inherits the provider registry of its base
+classes, but can override any provider by re-registering notes. When
+organizing a project, create an Injector subclass to serve as the
+object to register all providers. This allows for the project to have
+its own namespace of registered dependencies. This registry can be
+customized by further subclasses, either for injecting mocks in testing
+or providing alternative dependencies in a different runtime::
+
+    from jeni import Injector as BaseInjector
+
+    class Injector(BaseInjector):
+        "Subclass provides namespace when registering providers."
+
+
+``Injector.provider(cls, note, provider=None, name=False)``
+-----------------------------------------------------------
+
+Register a provider, either a Provider class or a generator.
+
+Provider class::
+
+    from jeni import Injector as BaseInjector
+    from jeni import Provider
+
+    class Injector(BaseInjector):
+        pass
+
+    @Injector.provider('hello')
+    class HelloProvider(Provider):
+        def get(self, name=None):
+            if name is None:
+                name = 'world'
+            return 'Hello, {}!'.format(name)
+
+Simple generator::
+
+    @Injector.provider('answer')
+    def answer():
+        yield 42
+
+If a generator supports get with a name argument::
+
+    @Injector.provider('spam', name=True)
+    def spam():
+        count_str = yield 'spam'
+        while True:
+            count_str = yield 'spam' * int(count_str)
+
+Registration can be a decorator or a direct method call::
+
+    Injector.provider('hello', HelloProvider)
+
+
+``Injector.factory(cls, note, fn=None)``
+----------------------------------------
+
+Register a function as a provider.
+
+Function (name support is optional)::
+
+    from jeni import Injector as BaseInjector
+    from jeni import Provider
+
+    class Injector(BaseInjector):
+        pass
+
+    @Injector.factory('echo')
+    def echo(name=None):
+        return name
+
+Registration can be a decorator or a direct method call::
+
+    Injector.factory('echo', echo)
+
+
+``Injector.apply(self, fn)``
+----------------------------
+
+Fully apply annotated callable, returning callable's result.
+
+
+``Injector.partial(self, fn)``
+------------------------------
+
+Partially apply annotated callable, returning a partial function.
+
+
+``Injector.get(self, note)``
+----------------------------
+
+Resolve a single note into an object.
+
+
+``Injector.close(self)``
+------------------------
+
+Close injector & injected Provider instances, including generators.
+
+Provider close methods should not intentionally raise errors.
+Specifically, if a dependency has transactions, the transaction should
+be committed or rolled back before close is called, and not left as an
+operation to be called during the close phase.
+
+
+``Injector.enter(self)``
+------------------------
+
+Enter context-manager without with-block. See also: `exit`.
+
+Useful for before- and after-hooks which cannot use a with-block.
+
+
+``Injector.exit(self)``
+-----------------------
+
+Exit context-manager without with-block. See also: `enter`.
+
+
+``Provider``
+------------
+
+Provide a single prepared dependency.
+
+
+``Provider.get(self, name=None)``
+---------------------------------
+
+Implement in subclass.
+
+
+``Provider.close(self)``
+------------------------
+
+By default, does nothing. Close objects as needed in subclass.
+
+
 
 Additional API
 ==============
+
+``InjectorProxy``
+-----------------
+
+Forwards getattr & getitem to enclosed injector.
+
+If an injector has 'hello' registered::
+
+    from jeni import InjectorProxy
+    deps = InjectorProxy(injector)
+    deps.hello
+
+Get by name can use dict-style access::
+
+    deps['hello:name']
+
 
 
 License
