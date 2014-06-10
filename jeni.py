@@ -307,6 +307,9 @@ class Injector(object):
 
     def get(self, note):
         """Resolve a single note into an object."""
+        if self.closed:
+            raise RuntimeError('{!r} already closed'.format(self))
+
         # Record request for note even if it fails to resolve.
         count = self.stats.get(note, 0)
         self.stats[note] = count + 1

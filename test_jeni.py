@@ -380,6 +380,11 @@ class ClosingTestCase(unittest.TestCase):
         self.assertRaises(jeni.UnsetError, self.injector.get, 'unset')
         self.injector.close()
 
+    def test_cannot_get_after_close(self):
+        self.assertEqual('thing', self.injector.get('echo:thing'))
+        self.injector.close()
+        self.assertRaises(RuntimeError, self.injector.get, 'echo:thing')
+
 
 class InjectorStatsTestCase(unittest.TestCase):
     def setUp(self):
