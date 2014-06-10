@@ -322,7 +322,8 @@ class Injector(object):
         operation to be called during the close phase.
 
         Providers are closed in the reverse order in which they were opened,
-        and each provider is only closed once.
+        and each provider is only closed once. Providers are only closed if
+        they have successfully provided a dependency via get.
         """
         # TODO: keeping counts on tokens resolved, not just bool, would be nice
         if self.closed:

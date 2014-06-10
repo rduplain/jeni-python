@@ -183,7 +183,8 @@ be committed or rolled back before close is called, and not left as an
 operation to be called during the close phase.
 
 Providers are closed in the reverse order in which they were opened,
-and each provider is only closed once.
+and each provider is only closed once. Providers are only closed if
+they have successfully provided a dependency via get.
 
 
 ``Injector.enter(self)``
