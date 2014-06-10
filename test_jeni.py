@@ -381,6 +381,40 @@ class ClosingTestCase(unittest.TestCase):
         self.injector.close()
 
 
+class InjectorStatsTestCase(unittest.TestCase):
+    def setUp(self):
+        self.injector = BasicInjector()
+
+    def test_empty_stats(self):
+        self.assertEqual({}, self.injector.stats)
+
+    def test_a_few_calls(self):
+        stats = {
+            'hello': 1,
+            'hello:thing': 1,
+            'eggs': 2,
+        }
+        self.injector.get('eggs')
+        self.injector.get('hello')
+        self.injector.get('hello:thing')
+        self.injector.get('eggs')
+        self.assertEqual(stats, self.injector.stats)
+
+    def test_many_calls(self):
+        stats = {
+            'hello': 10,
+            'hello:thing': 15,
+            'eggs': 21,
+        }
+        for _ in range(10):
+            self.injector.get('hello')
+        for _ in range(21):
+            self.injector.get('eggs')
+        for _ in range(15):
+            self.injector.get('hello:thing')
+        self.assertEqual(stats, self.injector.stats)
+
+
 class ContextManagerTestCase(unittest.TestCase):
     def test_with_block(self):
         with CloseTestInjector() as injector:

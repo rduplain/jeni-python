@@ -209,6 +209,10 @@ class Injector(object):
 
         self.get_order = []
 
+        #: Statistics for resolved notes, note -> count.
+        #: Records counts as soon as get is called, even if unset or error.
+        self.stats = {}
+
     @classmethod
     def provider(cls, note, provider=None, name=False):
         """Register a provider, either a Provider class or a generator.
@@ -303,6 +307,10 @@ class Injector(object):
 
     def get(self, note):
         """Resolve a single note into an object."""
+        # Record request for note even if it fails to resolve.
+        count = self.stats.get(note, 0)
+        self.stats[note] = count + 1
+
         basenote, name = self.parse_note(note)
         if name is None and basenote in self.values:
             return self.values[basenote]
@@ -325,7 +333,6 @@ class Injector(object):
         and each provider is only closed once. Providers are only closed if
         they have successfully provided a dependency via get.
         """
-        # TODO: keeping counts on tokens resolved, not just bool, would be nice
         if self.closed:
             raise RuntimeError('{!r} already closed'.format(self))
         for basenote in reversed(self.get_order):
