@@ -250,13 +250,19 @@ class UnsetArgumentTestCase(unittest.TestCase):
 
 
 class CloseMe(object):
-    def __init__(self):
+    # List of all closed instances for use in test inspection.
+    closed_items = []
+
+    def __init__(self, note):
         self.closed = None
+        self.note = note
 
     def open(self):
         self.closed = False
 
     def close(self):
+        assert not self.closed, '{!r} already closed'.format(self)
+        self.closed_items.append(self)
         self.closed = True
 
 
@@ -267,7 +273,7 @@ class CloseTestInjector(jeni.Injector):
 @CloseTestInjector.provider('via_class')
 class ClosingProvider(jeni.Provider):
     def __init__(self):
-        self.thing = CloseMe()
+        self.thing = CloseMe('via_class')
 
     def get(self):
         if self.thing.closed is None:
@@ -280,7 +286,7 @@ class ClosingProvider(jeni.Provider):
 
 @CloseTestInjector.provider('via_generator')
 def closing_generator():
-    thing = CloseMe()
+    thing = CloseMe('via_generator')
     thing.open()
     yield thing
     thing.close()
@@ -290,13 +296,16 @@ def closing_generator():
 def closing_generator_with_name():
     # Name is not actually used, but generator accepts name.
     try:
-        thing = CloseMe()
+        thing = CloseMe('via_generator_with_name')
         thing.open()
         yield thing
         while True:
             yield thing
     finally:
         thing.close()
+
+
+CloseTestInjector.factory('echo', echo)
 
 
 class ClosingTestCase(unittest.TestCase):
@@ -326,6 +335,25 @@ class ClosingTestCase(unittest.TestCase):
 
     def test_close_via_generator_with_name_name(self):
         self.assert_with_note('via_generator_with_name:name')
+
+    def _test_close_order(self):
+        injector = CloseTestInjector()
+        num_prev_closed_items = len(CloseMe.closed_items)
+        notes = ['via_generator', 'via_class', 'via_generator_with_name']
+        close_order = list(reversed(notes))
+        injector.get('echo') # Add a non-closing provider for good measure.
+        for note in notes:
+            injector.get(note)
+        injector.get('via_class') # Get again; should not impact order.
+        injector.close()
+        self.assertEqual(
+            close_order,
+            [x.note for x in CloseMe.closed_items[num_prev_closed_items:]])
+
+    def test_close_order(self):
+        # Test multiple times given failed test is random order.
+        for x in range(100):
+            self._test_close_order()
 
 
 class ContextManagerTestCase(unittest.TestCase):

@@ -207,6 +207,8 @@ class Injector(object):
         self.instances = {}
         self.values = {}
 
+        self.get_order = []
+
     @classmethod
     def provider(cls, note, provider=None, name=False):
         """Register a provider, either a Provider class or a generator.
@@ -318,13 +320,18 @@ class Injector(object):
         Specifically, if a dependency has transactions, the transaction should
         be committed or rolled back before close is called, and not left as an
         operation to be called during the close phase.
+
+        Providers are closed in the reverse order in which they were opened,
+        and each provider is only closed once.
         """
-        # TODO: have an opinion about order of closed
         # TODO: keeping counts on tokens resolved, not just bool, would be nice
         if self.closed:
             raise RuntimeError('{!r} already closed'.format(self))
-        for provider in self.instances.values():
-            provider.close()
+        for basenote in reversed(self.get_order):
+            if basenote not in self.instances:
+                # Provider is not an instance; no close implementation.
+                continue
+            self.instances[basenote].close()
         self.closed = True
 
     def prepare_callable(self, fn):
@@ -362,7 +369,14 @@ class Injector(object):
 
     def handle_provider(self, provider_or_fn, note):
         """Get value from provider as requested by note."""
+        # Implementation in separate method to support accurate book-keeping.
         basenote, name = self.parse_note(note)
+        result = self._handle_provider(provider_or_fn, note, basenote, name)
+        if basenote not in self.get_order:
+            self.get_order.append(basenote)
+        return result
+
+    def _handle_provider(self, provider_or_fn, note, basenote, name):
         if basenote in self.instances:
             provider_or_fn = self.instances[basenote]
         elif inspect.isclass(provider_or_fn):
