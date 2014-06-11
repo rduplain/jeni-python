@@ -222,6 +222,33 @@ class AnnotatedProviderTestCase(unittest.TestCase):
         self.assertEqual('spam', injector.get('spammish'))
 
 
+class MaybeTestCase(unittest.TestCase):
+    def setUp(self):
+        self.is_maybe = jeni.Maybe.is_maybe
+        self.note = jeni.Maybe('the_real_note')
+        class Object(object):
+            pass
+        self.maybe_ish = Object()
+        self.maybe_ish.maybe = 'the_real_note'
+        self.not_a_maybe = Object()
+
+    def test_maybe(self):
+        self.assertEqual('the_real_note', self.note.maybe)
+
+    def test_is_maybe(self):
+        self.assertTrue(self.is_maybe(self.note))
+        self.assertTrue(self.is_maybe(self.maybe_ish))
+        self.assertFalse(self.is_maybe(self.not_a_maybe))
+
+    def test_is_maybe_strict(self):
+        self.assertTrue(self.is_maybe(self.note, strict=True))
+        self.assertFalse(self.is_maybe(self.maybe_ish, strict=True))
+        self.assertFalse(self.is_maybe(self.not_a_maybe, strict=False))
+
+    def test_maybe_repr(self):
+        self.assertEqual("Maybe('the_real_note')", repr(self.note))
+
+
 @BasicInjector.factory('error')
 def error():
     raise jeni.UnsetError
@@ -234,6 +261,11 @@ def unset_arg(unused):
 
 @jeni.annotate('hello', unused='error')
 def unset_kwarg(hello, unused=None):
+    raise RuntimeError('UnsetError should raise before this on apply.')
+
+
+@jeni.annotate('hello', unused=jeni.annotate.maybe('error'))
+def unset_maybe_kwarg(hello, unused=None):
     return unused
 
 
@@ -246,7 +278,11 @@ class UnsetArgumentTestCase(unittest.TestCase):
         self.assertRaises(jeni.UnsetError, self.injector.apply, unset_arg)
 
     def test_unset_kwarg(self):
-        self.assertIs(None, self.injector.apply(unset_kwarg))
+        self.assertRaises(RuntimeError, unset_kwarg, None)
+        self.assertRaises(jeni.UnsetError, self.injector.apply, unset_kwarg)
+
+    def test_unset_maybe_kwarg(self):
+        self.assertIs(None, self.injector.apply(unset_maybe_kwarg))
 
 
 class CloseMe(object):

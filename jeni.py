@@ -101,6 +101,44 @@ class GeneratorProvider(Provider):
             raise RuntimeError(msg.format(self.function))
 
 
+class Maybe(object):
+    """Wrap a keyword note to record that its resolution is optional.
+
+    Normally all annotations require fulfilled dependencies, but if a keyword
+    argument is annotated as `maybe`, then an injector does not pass unset
+    dependencies on apply::
+
+        from jeni import annotate
+
+        @annotate('foo', bar=annotate.maybe('bar'))
+        def foobar(foo, bar=None):
+            return
+    """
+
+    def __init__(self, note):
+        #: The value to use when note is maybe (via `is_maybe`).
+        self.maybe = note
+
+    @classmethod
+    def is_maybe(cls, note, strict=False):
+        """True if given note is a Maybe instance, duck-typed if not strict."""
+        if strict:
+            return isinstance(note, cls)
+        else:
+            return hasattr(note, 'maybe')
+
+    def __repr__(self):
+        return '{}({!r})'.format(self.__class__.__name__, self.maybe)
+
+
+def see_doc(obj_with_doc):
+    """Copy docstring from existing object to the decorated callable."""
+    def decorator(fn):
+        fn.__doc__ = obj_with_doc.__doc__
+        return fn
+    return decorator
+
+
 class Annotator(object):
     """Annotate callables. Intended to be stateless dict of function pointers.
 
@@ -110,6 +148,8 @@ class Annotator(object):
 
     # TODO: Support base-case to opt-in a function annotated in Python 3.
     # TODO: Support annotation to inject partial.
+
+    maybe_class = Maybe
 
     def __call__(self, *notes, **keyword_notes):
         """Annotate a callable with a decorator to provide data for Injectors.
@@ -173,7 +213,18 @@ class Annotator(object):
             return False
         return True
 
+    @see_doc(Maybe)
+    def maybe(self, note):
+        return self.maybe_class(note)
+
+    @see_doc(Maybe.is_maybe)
+    def is_maybe(self, note, strict=False):
+        return self.maybe_class.is_maybe(note, strict=strict)
+
+
 annotate = Annotator()
+maybe = annotate.maybe
+is_maybe = annotate.is_maybe
 
 
 class Injector(object):
@@ -202,6 +253,7 @@ class Injector(object):
         self.get_annotations = annotator.get_annotations
         self.set_annotations = annotator.set_annotations
         self.has_annotations = annotator.has_annotations
+        self.is_maybe = annotator.is_maybe
 
         self.closed = False
         self.instances = {}
@@ -356,12 +408,14 @@ class Injector(object):
         args = tuple(self.get(note) for note in notes)
         kwargs = {}
         for arg in keyword_notes:
-            # TODO: Maybe.
             note = keyword_notes[arg]
-            try:
-                kwargs[arg] = self.get(note)
-            except UnsetError:
-                continue
+            if self.is_maybe(note):
+                try:
+                    kwargs[arg] = self.get(note.maybe)
+                except UnsetError:
+                    continue
+            else:
+                kwargs = self.get(note)
         return args, kwargs
 
     @classmethod

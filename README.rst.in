@@ -90,6 +90,8 @@ Additional API
 .. eval:: insert_doc(InjectorProxy)
 
 
+.. eval:: insert_doc(Annotator.maybe, name='annotate.maybe', u='-')
+
 
 License
 =======

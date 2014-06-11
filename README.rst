@@ -239,6 +239,21 @@ Get by name can use dict-style access::
     deps['hello:name']
 
 
+``annotate.maybe``
+------------------
+
+Wrap a keyword note to record that its resolution is optional.
+
+Normally all annotations require fulfilled dependencies, but if a keyword
+argument is annotated as `maybe`, then an injector does not pass unset
+dependencies on apply::
+
+    from jeni import annotate
+
+    @annotate('foo', bar=annotate.maybe('bar'))
+    def foobar(foo, bar=None):
+        return
+
 
 License
 =======
