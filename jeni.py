@@ -249,11 +249,7 @@ class Injector(object):
             class Injector(BaseInjector):
                 "Subclass provides namespace when registering providers."
         """
-        annotator = self.annotator_class()
-        self.get_annotations = annotator.get_annotations
-        self.set_annotations = annotator.set_annotations
-        self.has_annotations = annotator.has_annotations
-        self.is_maybe = annotator.is_maybe
+        self.annotator = self.annotator_class()
 
         self.closed = False
         self.instances = {}
@@ -521,6 +517,18 @@ class Injector(object):
     def exit(self):
         """Exit context-manager without with-block. See also: `enter`."""
         return self.__exit__(None, None, None)
+
+    @see_doc(Annotator.get_annotations)
+    def get_annotations(self, *a, **kw):
+        return self.annotator.get_annotations(*a, **kw)
+
+    @see_doc(Annotator.has_annotations)
+    def has_annotations(self, *a, **kw):
+        return self.annotator.has_annotations(*a, **kw)
+
+    @see_doc(Annotator.is_maybe)
+    def is_maybe(self, *a, **kw):
+        return self.annotator.is_maybe(*a, **kw)
 
 
 class InjectorProxy(object):
