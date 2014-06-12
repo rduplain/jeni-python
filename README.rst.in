@@ -1,6 +1,6 @@
-====================================
- jeni: dependency aggregation (dip)
-====================================
+===================================================
+ **jeni** injects dependencies through annotations
+===================================================
 
 **jeni** lets you build applications and not e.g. web applications.
 
@@ -39,6 +39,17 @@ Core API
 .. eval:: insert_doc(Annotator.__call__, name='annotate')
 
 
+.. exec:: from jeni import Provider
+.. eval:: insert_doc(Provider)
+
+
+.. exec:: opt = {'ns': 'Provider', 'u': '-'}
+.. eval:: insert_args_doc(Provider.get, **opt)
+
+
+.. eval:: insert_args_doc(Provider.close, **opt)
+
+
 .. exec:: from jeni import Injector
 .. eval:: insert_doc(Injector)
 
@@ -71,26 +82,14 @@ Core API
 .. eval:: insert_args_doc(Injector.exit, **opt)
 
 
-.. exec:: from jeni import Provider
-.. eval:: insert_doc(Provider)
-
-
-.. exec:: opt = {'ns': 'Provider', 'u': '-'}
-.. eval:: insert_args_doc(Provider.get, **opt)
-
-
-.. eval:: insert_args_doc(Provider.close, **opt)
-
-
-
 Additional API
 ==============
 
+.. eval:: insert_doc(Annotator.maybe, name='annotate.maybe', u='-')
+
+
 .. exec:: from jeni import InjectorProxy
 .. eval:: insert_doc(InjectorProxy)
-
-
-.. eval:: insert_doc(Annotator.maybe, name='annotate.maybe', u='-')
 
 
 License
