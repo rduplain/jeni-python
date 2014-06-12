@@ -8,8 +8,8 @@ test: tox-command README.txt
 
 smoke: develop coverage-command
 	@coverage erase
-	@coverage run test_jeni.py --failfast
-	@coverage report --show-missing --include=jeni.py,test_jeni.py
+	@coverage run run_tests.py --failfast
+	@coverage report --show-missing --include=jeni.py,test_jeni*.py
 
 flakes: pyflakes-command
 	@pyflakes *.py

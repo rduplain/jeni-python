@@ -131,8 +131,6 @@ class Annotator(object):
     Built as a class to embed annotation helpers and support customization.
     """
 
-    # TODO: Support base-case to opt-in a function annotated in Python 3.
-
     def __call__(self, *notes, **keyword_notes):
         """Annotate a callable with a decorator to provide data for Injectors.
 
@@ -161,12 +159,38 @@ class Annotator(object):
             foo, bar = 'foo', 'bar'
             function(foo, bar)
 
+        On Python 2, use decorators to annotate.
+        On Python 3, use either decorators or function annotations::
+
+            from jeni import annotate
+
+            @annotate
+            def function(foo: 'foo', bar: 'bar'):
+                return
+
+        Since function annotations could be interpreted differently by
+        different packages, injectors do not use ``function.__annotations__``
+        directly. Functions opt in by a simple ``@annotate``
+        decoration. Functions with Python annotations which have not been
+        decorated are assumed to not be decorated for injection.
+
+        (For this reason, annotating a callable with a single note where the
+        note is a callable is not supported.)
+
         Notes which are provided to `annotate` (above 'foo' and 'bar') can be
         any hashable object (i.e. object able to be used as a key in a dict)
         and is not limited to strings. If tuples are used as notes, they must
         be of length 2, and `('maybe', ...)` and `('partial', ...)` are
         reserved.
         """
+        if not keyword_notes and len(notes) == 1 and is_callable(notes[0]):
+            # Here @annotate is being used without arguments.
+            fn = notes[0]
+            if not getattr(fn, '__annotations__', None):
+                msg = '{!r} does not have annotations'
+                raise AttributeError(msg.format(fn))
+            self.set_annotations(fn, **fn.__annotations__)
+            return fn
         def decorator(fn):
             self.set_annotations(fn, *notes, **keyword_notes)
             return fn
@@ -427,7 +451,7 @@ class Injector(object):
                 except UnsetError:
                     continue
             else:
-                kwargs = self.get(note)
+                kwargs[arg] = self.get(note)
         return args, kwargs
 
     @classmethod
@@ -588,3 +612,8 @@ def class_in_progress(stack=None):
         if statement_list[0].strip().startswith('class '):
             return True
     return False
+
+
+def is_callable(obj):
+    """True if object is callable, else False."""
+    return hasattr(obj, '__call__')

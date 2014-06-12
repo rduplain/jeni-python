@@ -164,6 +164,17 @@ class BasicInjectorAnnotationTestCase(unittest.TestCase):
             "unused"
         self.assertRaises(AttributeError, self.injector.apply, fn)
 
+    def test_annotate_without_annotations(self):
+        def fn(hello):
+            "unused"
+        self.assertRaises(AttributeError, jeni.annotate, fn)
+        fn.__annotations__ = {}
+        self.assertRaises(AttributeError, jeni.annotate, fn)
+
+        fn.__annotations__ = {'hello': 'hello:world'}
+        jeni.annotate(fn)
+        self.assertTrue(jeni.annotate.has_annotations(fn))
+
 
 class SubInjectorAnnotationTestCase(BasicInjectorAnnotationTestCase):
     def setUp(self):
@@ -679,5 +690,16 @@ class TestClassInProgress(unittest.TestCase):
         self.assertFalse(jeni.class_in_progress(stack=stack))
 
 
-if __name__ == '__main__':
-    unittest.main()
+class TestIsCallable(unittest.TestCase):
+    def test_annotate(self):
+        self.assertTrue(jeni.is_callable(jeni.annotate))
+
+    def test_lambda(self):
+        self.assertTrue(jeni.is_callable(lambda: None))
+
+    def test_object_type_and_instance(self):
+        self.assertTrue(jeni.is_callable(object))
+        self.assertFalse(jeni.is_callable(object()))
+
+
+if __name__ == '__main__': unittest.main()

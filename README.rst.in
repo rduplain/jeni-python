@@ -29,7 +29,8 @@ REPL as it is to an injector.
 Annotations
 ===========
 
-Annotations are implemented as decorators for Python2.
+Annotations are implemented as decorators for Python2. In Python 3, either
+decorators or function annotations can be used for injection.
 
 
 Core API

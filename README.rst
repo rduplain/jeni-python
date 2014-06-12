@@ -31,7 +31,8 @@ REPL as it is to an injector.
 Annotations
 ===========
 
-Annotations are implemented as decorators for Python2.
+Annotations are implemented as decorators for Python2. In Python 3, either
+decorators or function annotations can be used for injection.
 
 
 Core API
@@ -66,6 +67,24 @@ Call it normally::
 
     foo, bar = 'foo', 'bar'
     function(foo, bar)
+
+On Python 2, use decorators to annotate.
+On Python 3, use either decorators or function annotations::
+
+    from jeni import annotate
+
+    @annotate
+    def function(foo: 'foo', bar: 'bar'):
+        return
+
+Since function annotations could be interpreted differently by
+different packages, injectors do not use ``function.__annotations__``
+directly. Functions opt in by a simple ``@annotate``
+decoration. Functions with Python annotations which have not been
+decorated are assumed to not be decorated for injection.
+
+(For this reason, annotating a callable with a single note where the
+note is a callable is not supported.)
 
 Notes which are provided to `annotate` (above 'foo' and 'bar') can be
 any hashable object (i.e. object able to be used as a key in a dict)
