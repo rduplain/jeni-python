@@ -2,24 +2,24 @@
  ``jeni`` injects dependencies through annotations
 ===================================================
 
-**jeni** lets you build applications and not e.g. web applications.
+**jeni** lets developers build applications and not e.g. web applications.
 
 Overview
 ========
 
-1. Configure dependencies that your system uses.
-2. Give your code natural call interfaces accepting those dependencies.
+1. Configure each dependency in the project (requirements.txt, config, ...).
+2. Write code with natural call signatures taking those dependencies as input.
 3. Implement a **Provider** for each dependency, register with an **Injector**.
 
-jeni runs on Python 2.7, Python 3.2, Python 3.3, and pypy.
+jeni runs on Python 2.7, Python 3.2 through 3.4, and pypy.
 
 
 Motivation
 ==========
 
-Write code as its meant to be written, without pegging your call signatures to
-some monolithic object that only applies to a specific runtime. This is about
-more than just testing. This lets you write composable utilities.
+Write code as its meant to be written, without pegging function call signatures
+to some monolithic object that only applies to a specific runtime. This is
+about more than just testing. This is about composition.
 
 jeni's design principle is to have all annotated callables usable in a context
 that knows nothing about jeni. Any callable is as relevant to a fresh Python
