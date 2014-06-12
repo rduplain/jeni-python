@@ -4,7 +4,7 @@
 
 """``jeni`` injects dependencies through annotations"""
 
-__version__ = '0.3-dev'
+__version__ = '0.3'
 
 import abc
 import functools
