@@ -122,7 +122,10 @@ def see_doc(obj_with_doc):
 
 
 class Annotator(object):
-    """Annotate callables. Intended to be stateless dict of function pointers.
+    """Class intent: serve as a stateless dict of function pointers.
+
+    Annotate callables, settings data on callable objects themselves,
+    providing hints for modes like maybe and partial.
 
     Annotations on callables are data for jeni's injection.
     Built as a class to embed annotation helpers and support customization.
