@@ -16,6 +16,7 @@ import six
 
 
 MAYBE = 'maybe'
+PARTIAL = 'partial'
 
 
 class UnsetError(LookupError):
@@ -128,7 +129,6 @@ class Annotator(object):
     """
 
     # TODO: Support base-case to opt-in a function annotated in Python 3.
-    # TODO: Support annotation to inject partial.
 
     def __call__(self, *notes, **keyword_notes):
         """Annotate a callable with a decorator to provide data for Injectors.
@@ -161,7 +161,8 @@ class Annotator(object):
         Notes which are provided to `annotate` (above 'foo' and 'bar') can be
         any hashable object (i.e. object able to be used as a key in a dict)
         and is not limited to strings. If tuples are used as notes, they must
-        be of length 2, and `('maybe', ...)` is reserved.
+        be of length 2, and `('maybe', ...)` and `('partial', ...)` are
+        reserved.
         """
         def decorator(fn):
             self.set_annotations(fn, *notes, **keyword_notes)
@@ -211,9 +212,28 @@ class Annotator(object):
         """
         return (MAYBE, note)
 
+    def partial(self, fn):
+        """Wrap a note for injection of a partially applied function.
+
+        This allows for annotated functions to be injected for composition::
+
+            from jeni import annotate
+
+            @annotate('foo', bar=annotate.maybe('bar'))
+            def foobar(foo, bar=None):
+                return
+
+            @annotate('foo', annotate.partial(foobar))
+            def bazquux(foo, fn):
+                # fn: injector.partial(foobar)
+                return
+        """
+        return (PARTIAL, fn)
+
 
 annotate = Annotator()
 maybe = annotate.maybe
+partial = annotate.partial
 
 
 class Injector(object):
@@ -351,6 +371,10 @@ class Injector(object):
         count = self.stats.get(note, 0)
         self.stats[note] = count + 1
 
+        # Handle injection of partially applied annotated functions.
+        if isinstance(note, tuple) and len(note) == 2 and note[0] == PARTIAL:
+            return self.partial(note[1])
+
         basenote, name = self.parse_note(note)
         if name is None and basenote in self.values:
             return self.values[basenote]
@@ -394,12 +418,11 @@ class Injector(object):
         kwargs = {}
         for arg in keyword_notes:
             note = keyword_notes[arg]
-            if isinstance(note, tuple) and len(note) == 2:
-                if note[0] == MAYBE:
-                    try:
-                        kwargs[arg] = self.get(note[1])
-                    except UnsetError:
-                        continue
+            if isinstance(note, tuple) and len(note) == 2 and note[0] == MAYBE:
+                try:
+                    kwargs[arg] = self.get(note[1])
+                except UnsetError:
+                    continue
             else:
                 kwargs = self.get(note)
         return args, kwargs

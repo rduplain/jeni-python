@@ -88,6 +88,9 @@ Additional API
 .. eval:: insert_doc(Annotator.maybe, name='annotate.maybe', u='-')
 
 
+.. eval:: insert_doc(Annotator.partial, name='annotate.partial', u='-')
+
+
 .. exec:: from jeni import InjectorProxy
 .. eval:: insert_doc(InjectorProxy)
 

@@ -70,7 +70,8 @@ Call it normally::
 Notes which are provided to `annotate` (above 'foo' and 'bar') can be
 any hashable object (i.e. object able to be used as a key in a dict)
 and is not limited to strings. If tuples are used as notes, they must
-be of length 2, and `('maybe', ...)` is reserved.
+be of length 2, and `('maybe', ...)` and `('partial', ...)` are
+reserved.
 
 
 ``Provider``
@@ -247,6 +248,25 @@ dependencies on apply::
 
     @annotate('foo', bar=annotate.maybe('bar'))
     def foobar(foo, bar=None):
+        return
+
+
+``annotate.partial``
+--------------------
+
+Wrap a note for injection of a partially applied function.
+
+This allows for annotated functions to be injected for composition::
+
+    from jeni import annotate
+
+    @annotate('foo', bar=annotate.maybe('bar'))
+    def foobar(foo, bar=None):
+        return
+
+    @annotate('foo', annotate.partial(foobar))
+    def bazquux(foo, fn):
+        # fn: injector.partial(foobar)
         return
 
 

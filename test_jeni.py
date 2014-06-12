@@ -230,6 +230,15 @@ class MaybeTestCase(unittest.TestCase):
         self.assertEqual((jeni.MAYBE, 'the_real_note'), self.note)
 
 
+class PartialNoteTestCase(unittest.TestCase):
+    def setUp(self):
+        self.fn = lambda: None
+        self.note = jeni.partial(self.fn)
+
+    def test_partial(self):
+        self.assertEqual((jeni.PARTIAL, self.fn), self.note)
+
+
 @BasicInjector.factory('error')
 def error():
     raise jeni.UnsetError
@@ -264,6 +273,26 @@ class UnsetArgumentTestCase(unittest.TestCase):
 
     def test_unset_maybe_kwarg(self):
         self.assertIs(None, self.injector.apply(unset_maybe_kwarg))
+
+
+@jeni.annotate('hello:partial')
+def hello_partial(hello):
+    return hello
+
+
+@jeni.annotate('hello:again', jeni.annotate.partial(hello_partial))
+def hello_again_partial(hello, fn):
+    return hello, fn()
+
+
+class InjectPartialTestCase(unittest.TestCase):
+    def setUp(self):
+        self.injector = BasicInjector()
+
+    def test_partial_injection(self):
+        self.assertEqual(
+            ('Hello, again!', 'Hello, partial!'),
+            self.injector.apply(hello_again_partial))
 
 
 class CloseMe(object):
