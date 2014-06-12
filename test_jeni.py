@@ -224,29 +224,10 @@ class AnnotatedProviderTestCase(unittest.TestCase):
 
 class MaybeTestCase(unittest.TestCase):
     def setUp(self):
-        self.is_maybe = jeni.Maybe.is_maybe
-        self.note = jeni.Maybe('the_real_note')
-        class Object(object):
-            pass
-        self.maybe_ish = Object()
-        self.maybe_ish.maybe = 'the_real_note'
-        self.not_a_maybe = Object()
+        self.note = jeni.maybe('the_real_note')
 
     def test_maybe(self):
-        self.assertEqual('the_real_note', self.note.maybe)
-
-    def test_is_maybe(self):
-        self.assertTrue(self.is_maybe(self.note))
-        self.assertTrue(self.is_maybe(self.maybe_ish))
-        self.assertFalse(self.is_maybe(self.not_a_maybe))
-
-    def test_is_maybe_strict(self):
-        self.assertTrue(self.is_maybe(self.note, strict=True))
-        self.assertFalse(self.is_maybe(self.maybe_ish, strict=True))
-        self.assertFalse(self.is_maybe(self.not_a_maybe, strict=False))
-
-    def test_maybe_repr(self):
-        self.assertEqual("Maybe('the_real_note')", repr(self.note))
+        self.assertEqual((jeni.MAYBE, 'the_real_note'), self.note)
 
 
 @BasicInjector.factory('error')

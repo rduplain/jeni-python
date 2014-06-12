@@ -67,6 +67,11 @@ Call it normally::
     foo, bar = 'foo', 'bar'
     function(foo, bar)
 
+Notes which are provided to `annotate` (above 'foo' and 'bar') can be
+any hashable object (i.e. object able to be used as a key in a dict)
+and is not limited to strings. If tuples are used as notes, they must
+be of length 2, and `('maybe', ...)` is reserved.
+
 
 ``Injector``
 ------------

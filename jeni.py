@@ -15,6 +15,9 @@ import sys
 import six
 
 
+MAYBE = 'maybe'
+
+
 class UnsetError(LookupError):
     """Note is not able to be provided, as it is currently unset."""
     def __init__(self, *a, **kw):
@@ -101,36 +104,6 @@ class GeneratorProvider(Provider):
             raise RuntimeError(msg.format(self.function))
 
 
-class Maybe(object):
-    """Wrap a keyword note to record that its resolution is optional.
-
-    Normally all annotations require fulfilled dependencies, but if a keyword
-    argument is annotated as `maybe`, then an injector does not pass unset
-    dependencies on apply::
-
-        from jeni import annotate
-
-        @annotate('foo', bar=annotate.maybe('bar'))
-        def foobar(foo, bar=None):
-            return
-    """
-
-    def __init__(self, note):
-        #: The value to use when note is maybe (via `is_maybe`).
-        self.maybe = note
-
-    @classmethod
-    def is_maybe(cls, note, strict=False):
-        """True if given note is a Maybe instance, duck-typed if not strict."""
-        if strict:
-            return isinstance(note, cls)
-        else:
-            return hasattr(note, 'maybe')
-
-    def __repr__(self):
-        return '{}({!r})'.format(self.__class__.__name__, self.maybe)
-
-
 def see_doc(obj_with_doc):
     """Copy docstring from existing object to the decorated callable."""
     def decorator(fn):
@@ -148,8 +121,6 @@ class Annotator(object):
 
     # TODO: Support base-case to opt-in a function annotated in Python 3.
     # TODO: Support annotation to inject partial.
-
-    maybe_class = Maybe
 
     def __call__(self, *notes, **keyword_notes):
         """Annotate a callable with a decorator to provide data for Injectors.
@@ -179,6 +150,10 @@ class Annotator(object):
             foo, bar = 'foo', 'bar'
             function(foo, bar)
 
+        Notes which are provided to `annotate` (above 'foo' and 'bar') can be
+        any hashable object (i.e. object able to be used as a key in a dict)
+        and is not limited to strings. If tuples are used as notes, they must
+        be of length 2, and `('maybe', ...)` is reserved.
         """
         def decorator(fn):
             self.set_annotations(fn, *notes, **keyword_notes)
@@ -213,18 +188,24 @@ class Annotator(object):
             return False
         return True
 
-    @see_doc(Maybe)
     def maybe(self, note):
-        return self.maybe_class(note)
+        """Wrap a keyword note to record that its resolution is optional.
 
-    @see_doc(Maybe.is_maybe)
-    def is_maybe(self, note, strict=False):
-        return self.maybe_class.is_maybe(note, strict=strict)
+        Normally all annotations require fulfilled dependencies, but if a keyword
+        argument is annotated as `maybe`, then an injector does not pass unset
+        dependencies on apply::
+
+            from jeni import annotate
+
+            @annotate('foo', bar=annotate.maybe('bar'))
+            def foobar(foo, bar=None):
+                return
+        """
+        return (MAYBE, note)
 
 
 annotate = Annotator()
 maybe = annotate.maybe
-is_maybe = annotate.is_maybe
 
 
 class Injector(object):
@@ -405,11 +386,12 @@ class Injector(object):
         kwargs = {}
         for arg in keyword_notes:
             note = keyword_notes[arg]
-            if self.is_maybe(note):
-                try:
-                    kwargs[arg] = self.get(note.maybe)
-                except UnsetError:
-                    continue
+            if isinstance(note, tuple) and len(note) == 2:
+                if note[0] == MAYBE:
+                    try:
+                        kwargs[arg] = self.get(note[1])
+                    except UnsetError:
+                        continue
             else:
                 kwargs = self.get(note)
         return args, kwargs
@@ -525,10 +507,6 @@ class Injector(object):
     @see_doc(Annotator.has_annotations)
     def has_annotations(self, *a, **kw):
         return self.annotator.has_annotations(*a, **kw)
-
-    @see_doc(Annotator.is_maybe)
-    def is_maybe(self, *a, **kw):
-        return self.annotator.is_maybe(*a, **kw)
 
 
 class InjectorProxy(object):
