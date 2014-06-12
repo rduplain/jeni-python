@@ -84,6 +84,13 @@ Provide a single prepared dependency.
 
 Implement in subclass.
 
+Annotations in the form of ``'object:name'`` will pass the `name` value
+to the `get` method of the registered `Provider` (in this case, the
+provider registered with the `Injector` to provide `object`). This
+get-by-name pattern is useful for providers which have a dependency
+which supports lookups by key (e.g. HTTP headers or records in a
+key-value store).
+
 
 ``Provider.close(self)``
 ------------------------
