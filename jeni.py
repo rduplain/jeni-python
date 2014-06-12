@@ -2,7 +2,7 @@
 # Copyright 2013-2014 Ron DuPlain <ron.duplain@gmail.com> (see AUTHORS file).
 # Released under the BSD License (see LICENSE file).
 
-"""**jeni** injects dependencies through annotations"""
+"""``jeni`` injects dependencies through annotations"""
 
 __version__ = '0.3-dev'
 
