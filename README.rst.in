@@ -1,6 +1,6 @@
-===================================================
- ``jeni`` injects dependencies through annotations
-===================================================
+=========================================
+ ``jeni`` injects annotated dependencies
+=========================================
 
 **jeni** lets developers build applications and not e.g. web applications.
 

@@ -52,7 +52,7 @@ setup(
     license='BSD',
     author='Ron DuPlain',
     author_email='ron.duplain@gmail.com',
-    description='jeni injects dependencies through annotations',
+    description='jeni injects annotated dependencies',
     long_description=long_description,
     py_modules=['jeni'],
     install_requires=[
