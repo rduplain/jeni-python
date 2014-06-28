@@ -25,6 +25,9 @@ def echo(name=None):
     return name
 
 
+BasicInjector.value('zero', 0)
+
+
 @BasicInjector.provider('answer')
 def answer():
     yield 42
@@ -80,6 +83,13 @@ class BasicInjectorTestCase(unittest.TestCase):
     def test_factory_with_name(self):
         self.assertEqual(None, self.injector.get('echo'))
         self.assertEqual('foo', self.injector.get('echo:foo'))
+
+    def test_value(self):
+        self.assertEqual(0, self.injector.get('zero'))
+        self.assertEqual(0, self.injector.get('zero'))
+
+        # This does not accept name.
+        self.assertRaises(TypeError, self.injector.get, 'zero:thing')
 
     def test_generator(self):
         self.assertEqual(42, self.injector.get('answer'))

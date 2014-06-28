@@ -204,6 +204,14 @@ Registration can be a decorator or a direct method call::
     Injector.factory('echo', echo)
 
 
+``Injector.value(cls, note, scalar)``
+-------------------------------------
+
+Register a single value to be provided.
+
+Supports base notes only, does not support get-by-name notes.
+
+
 ``Injector.apply(self, fn, *a, **kw)``
 --------------------------------------
 

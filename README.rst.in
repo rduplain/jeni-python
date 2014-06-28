@@ -65,6 +65,9 @@ Core API
 .. eval:: insert_args_doc(Injector.factory, **opt)
 
 
+.. eval:: insert_args_doc(Injector.value, **opt)
+
+
 .. eval:: insert_args_doc(Injector.apply, **opt)
 
 

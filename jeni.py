@@ -380,6 +380,14 @@ class Injector(object):
                 return f
             return decorator
 
+    @classmethod
+    def value(cls, note, scalar):
+        """Register a single value to be provided.
+
+        Supports base notes only, does not support get-by-name notes.
+        """
+        cls.factory(note, lambda: scalar)
+
     def apply(self, fn, *a, **kw):
         """Fully apply annotated callable, returning callable's result."""
         args, kwargs = self.prepare_callable(fn)
