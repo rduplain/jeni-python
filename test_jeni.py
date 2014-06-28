@@ -206,6 +206,88 @@ class BoringAnnotationTestCase(BasicInjectorAnnotationTestCase):
         self.fn = fn
 
 
+class ApplyScenariosTestCase(unittest.TestCase):
+    def setUp(self):
+        self.injector = BasicInjector()
+
+        @jeni.annotate('hello')
+        def fn_annotated(hello, *a, **kw):
+            return hello, a, kw
+        self.fn_annotated = fn_annotated
+
+        def fn_not_annotated(*a, **kw):
+            return a, kw
+        self.fn_not_annotated = fn_not_annotated
+
+    def test_apply(self):
+        self.assertEqual(
+            ('Hello, world!', (), {}),
+            self.injector.apply(self.fn_annotated))
+        self.assertRaises(
+            AttributeError,
+            self.injector.apply, self.fn_not_annotated)
+
+    def test_additional_arguments_apply(self):
+        self.assertEqual(
+            ('Hello, world!', ('a', 'b'), {'letter': 'c'}),
+            self.injector.apply(self.fn_annotated, 'a', 'b', letter='c'))
+        self.assertRaises(
+            AttributeError,
+            self.injector.apply, self.fn_not_annotated, 'a', 'b', letter='c')
+
+    def test_apply_regardless(self):
+        self.assertEqual(
+            ('Hello, world!', (), {}),
+            self.injector.apply_regardless(self.fn_annotated))
+        self.assertEqual(
+            ((), {}),
+            self.injector.apply_regardless(self.fn_not_annotated))
+
+    def test_additional_arguments_apply_regardless(self):
+        self.assertEqual(
+            ('Hello, world!', ('a', 'b'), {'letter': 'c'}),
+            self.injector.apply_regardless(
+                self.fn_annotated, 'a', 'b', letter='c'))
+        self.assertEqual(
+            (('a', 'b'), {'letter': 'c'}),
+            self.injector.apply_regardless(
+                self.fn_not_annotated, 'a', 'b', letter='c'))
+
+    def test_partial(self):
+        self.assertEqual(
+            ('Hello, world!', (), {}),
+            self.injector.partial(self.fn_annotated)())
+        self.assertRaises(
+            AttributeError,
+            self.injector.partial, self.fn_not_annotated)
+
+    def test_additional_arguments_partial(self):
+        self.assertEqual(
+            ('Hello, world!', ('a', 'b'), {'letter': 'c'}),
+            self.injector.partial(self.fn_annotated, 'a', 'b', letter='c')())
+        self.assertRaises(
+            AttributeError,
+            self.injector.partial, self.fn_not_annotated, 'a', 'b', letter='c')
+
+    def test_partial_regardless(self):
+        self.assertEqual(
+            ('Hello, world!', (), {}),
+            self.injector.partial_regardless(self.fn_annotated)())
+        self.assertEqual(
+            ((), {}),
+            self.injector.partial_regardless(self.fn_not_annotated)())
+
+    def test_additional_arguments_partial_regardless(self):
+        self.assertEqual(
+            ('Hello, world!', ('a', 'b'), {'letter': 'c'}),
+            self.injector.partial_regardless(
+                self.fn_annotated, 'a', 'b', letter='c')())
+        self.assertEqual(
+            (('a', 'b'), {'letter': 'c'}),
+            self.injector.partial_regardless(
+                self.fn_not_annotated, 'a', 'b', letter='c')())
+
+
 @jeni.annotate('spam', 'eggs')
 def spam_eggs(spam, eggs, name=None):
     if name is not None:

@@ -204,16 +204,28 @@ Registration can be a decorator or a direct method call::
     Injector.factory('echo', echo)
 
 
-``Injector.apply(self, fn)``
-----------------------------
+``Injector.apply(self, fn, *a, **kw)``
+--------------------------------------
 
 Fully apply annotated callable, returning callable's result.
 
 
-``Injector.partial(self, fn)``
-------------------------------
+``Injector.partial(self, fn, *a, **kw)``
+----------------------------------------
 
 Partially apply annotated callable, returning a partial function.
+
+
+``Injector.apply_regardless(self, fn, *a, **kw)``
+-------------------------------------------------
+
+Like `apply`, but applies even if callable is not annotated.
+
+
+``Injector.partial_regardless(self, fn, *a, **kw)``
+---------------------------------------------------
+
+Like `partial`, but applies even if callable is not annotated.
 
 
 ``Injector.get(self, note)``

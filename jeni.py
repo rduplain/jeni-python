@@ -379,15 +379,29 @@ class Injector(object):
                 return f
             return decorator
 
-    def apply(self, fn):
+    def apply(self, fn, *a, **kw):
         """Fully apply annotated callable, returning callable's result."""
         args, kwargs = self.prepare_callable(fn)
+        args += a; kwargs.update(kw)
         return fn(*args, **kwargs)
 
-    def partial(self, fn):
+    def partial(self, fn, *a, **kw):
         """Partially apply annotated callable, returning a partial function."""
         args, kwargs = self.prepare_callable(fn)
+        args += a; kwargs.update(kw)
         return functools.partial(fn, *args, **kwargs)
+
+    def apply_regardless(self, fn, *a, **kw):
+        """Like `apply`, but applies even if callable is not annotated."""
+        if self.has_annotations(fn):
+            return self.apply(fn, *a, **kw)
+        return fn(*a, **kw)
+
+    def partial_regardless(self, fn, *a, **kw):
+        """Like `partial`, but applies even if callable is not annotated."""
+        if self.has_annotations(fn):
+            return self.partial(fn, *a, **kw)
+        return functools.partial(fn, *a, **kw)
 
     def get(self, note):
         """Resolve a single note into an object."""

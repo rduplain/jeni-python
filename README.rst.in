@@ -71,6 +71,12 @@ Core API
 .. eval:: insert_args_doc(Injector.partial, **opt)
 
 
+.. eval:: insert_args_doc(Injector.apply_regardless, **opt)
+
+
+.. eval:: insert_args_doc(Injector.partial_regardless, **opt)
+
+
 .. eval:: insert_args_doc(Injector.get, **opt)
 
 
