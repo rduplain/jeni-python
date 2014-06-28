@@ -7,6 +7,7 @@
 __version__ = '0.3.1-dev'
 
 import abc
+import collections
 import functools
 import inspect
 import re
@@ -295,7 +296,7 @@ class Injector(object):
 
         #: Statistics for resolved notes, note -> count.
         #: Records counts as soon as get is called, even if unset or error.
-        self.stats = {}
+        self.stats = collections.defaultdict(int)
 
     @classmethod
     def provider(cls, note, provider=None, name=False):
@@ -409,8 +410,7 @@ class Injector(object):
             raise RuntimeError('{!r} already closed'.format(self))
 
         # Record request for note even if it fails to resolve.
-        count = self.stats.get(note, 0)
-        self.stats[note] = count + 1
+        self.stats[note] += 1
 
         # Handle injection of partially applied annotated functions.
         if isinstance(note, tuple) and len(note) == 2 and note[0] == PARTIAL:
