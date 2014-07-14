@@ -452,7 +452,7 @@ class Injector(object):
             if basenote not in self.instances:
                 # Provider is not an instance; no close implementation.
                 continue
-            self.instances[basenote].close()
+            self.apply_regardless(self.instances[basenote].close)
         self.closed = True
 
     def prepare_callable(self, fn):

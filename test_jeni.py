@@ -466,6 +466,19 @@ class UnsetProvider(jeni.Provider):
         assert False, 'This should not be called by injector.'
 
 
+@CloseTestInjector.provider('annotated_close')
+class AnnotatedCloseProvider(jeni.Provider):
+    def __init__(self):
+        self.foo = None
+
+    def get(self):
+        return self
+
+    @jeni.annotate('echo:bar')
+    def close(self, echo):
+        self.foo = echo
+
+
 CloseTestInjector.factory('echo', echo)
 
 
@@ -533,6 +546,12 @@ class ClosingTestCase(unittest.TestCase):
         self.assertEqual('thing', self.injector.get('echo:thing'))
         self.injector.close()
         self.assertRaises(RuntimeError, self.injector.get, 'echo:thing')
+
+    def test_annotated_close(self):
+        provider = self.injector.get('annotated_close')
+        self.assertEqual(None, provider.foo)
+        self.injector.close()
+        self.assertEqual('bar', provider.foo)
 
 
 class InjectorStatsTestCase(unittest.TestCase):
