@@ -526,8 +526,12 @@ class Injector(object):
         except UnsetError:
             # Use sys.exc_info to support both Python 2 and Python 3.
             exc_type, exc_value, tb = sys.exc_info()
-            exc_value.note = note
-            six.reraise(exc_type, exc_value, tb)
+            exc_msg = str(exc_value)
+            if exc_msg:
+                msg = '{}: {!r}'.format(exc_msg, note)
+            else:
+                msg = repr(note)
+            six.reraise(exc_type, exc_type(msg, note=note), tb)
 
     @classmethod
     def register(cls, note, provider):

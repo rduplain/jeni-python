@@ -1,3 +1,4 @@
+import sys
 import unittest
 
 import jeni
@@ -344,7 +345,7 @@ class PartialNoteTestCase(unittest.TestCase):
 
 @BasicInjector.factory('error')
 def error():
-    raise jeni.UnsetError
+    raise jeni.UnsetError()
 
 
 @jeni.annotate('error')
@@ -376,6 +377,44 @@ class UnsetArgumentTestCase(unittest.TestCase):
 
     def test_unset_maybe_kwarg(self):
         self.assertIs(None, self.injector.apply(unset_maybe_kwarg))
+
+
+class UnsetInjector(jeni.Injector):
+    pass
+
+
+@UnsetInjector.factory('unset_msg')
+def unset_msg_factory():
+    raise jeni.UnsetError('exception message')
+
+
+@UnsetInjector.factory('unset_no_msg')
+def unset_no_msg_factory():
+    raise jeni.UnsetError()
+
+
+class UnsetErrorMessageTestCase(unittest.TestCase):
+    def setUp(self):
+        self.injector = UnsetInjector()
+
+    def get_error(self, note):
+        err = None
+        try:
+            self.injector.get(note)
+        except jeni.UnsetError:
+            _, err, _ = sys.exc_info()
+        self.assertIsNotNone(err)
+        return err
+
+    def test_unset_msg(self):
+        err = self.get_error('unset_msg')
+        self.assertEqual(str(err), "exception message: 'unset_msg'")
+        self.assertEqual(err.note, 'unset_msg')
+
+    def test_unset_no_msg(self):
+        err = self.get_error('unset_no_msg')
+        self.assertEqual(str(err), "'unset_no_msg'")
+        self.assertEqual(err.note, 'unset_no_msg')
 
 
 @jeni.annotate('hello:partial')
@@ -774,7 +813,7 @@ class TestInjectorProxy(unittest.TestCase):
         @SubInjector.factory('picky')
         def no_spam(name=None):
             if name and 'spam' in name:
-                raise jeni.UnsetError
+                raise jeni.UnsetError()
             elif name:
                 return name
             else:
