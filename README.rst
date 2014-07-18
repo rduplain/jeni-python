@@ -279,9 +279,9 @@ Additional API
 
 Wrap a keyword note to record that its resolution is optional.
 
-Normally all annotations require fulfilled dependencies, but if a keyword
-argument is annotated as `maybe`, then an injector does not pass unset
-dependencies on apply::
+Normally all annotations require fulfilled dependencies, but if a
+keyword argument is annotated as `maybe`, then on apply, an injector
+does not attempt to pass dependencies which are unset or not provided::
 
     from jeni import annotate
 

@@ -363,6 +363,11 @@ def unset_maybe_kwarg(hello, unused=None):
     return unused
 
 
+@jeni.annotate('hello', unused=jeni.annotate.maybe('notprovided'))
+def notprovided_maybe_kwarg(hello, unused=None):
+    return unused
+
+
 class UnsetArgumentTestCase(unittest.TestCase):
     def setUp(self):
         self.injector = BasicInjector()
@@ -377,6 +382,9 @@ class UnsetArgumentTestCase(unittest.TestCase):
 
     def test_unset_maybe_kwarg(self):
         self.assertIs(None, self.injector.apply(unset_maybe_kwarg))
+
+    def test_notprovided_maybe_kwarg(self):
+        self.assertIs(None, self.injector.apply(notprovided_maybe_kwarg))
 
 
 class UnsetInjector(jeni.Injector):

@@ -20,6 +20,7 @@ MAYBE = 'maybe'
 PARTIAL = 'partial'
 
 
+
 class UnsetError(LookupError):
     """Note is not able to be provided, as it is currently unset."""
     def __init__(self, *a, **kw):
@@ -228,9 +229,9 @@ class Annotator(object):
     def maybe(self, note):
         """Wrap a keyword note to record that its resolution is optional.
 
-        Normally all annotations require fulfilled dependencies, but if a keyword
-        argument is annotated as `maybe`, then an injector does not pass unset
-        dependencies on apply::
+        Normally all annotations require fulfilled dependencies, but if a
+        keyword argument is annotated as `maybe`, then on apply, an injector
+        does not attempt to pass dependencies which are unset or not provided::
 
             from jeni import annotate
 
@@ -470,7 +471,7 @@ class Injector(object):
             if isinstance(note, tuple) and len(note) == 2 and note[0] == MAYBE:
                 try:
                     kwargs[arg] = self.get(note[1])
-                except UnsetError:
+                except LookupError:
                     continue
             else:
                 kwargs[arg] = self.get(note)
