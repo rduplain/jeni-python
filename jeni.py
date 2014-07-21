@@ -45,7 +45,18 @@ class Provider(object):
         """
 
     def close(self):
-        """By default, does nothing. Close objects as needed in subclass."""
+        """By default, does nothing. Close objects as needed in subclass.
+
+        Provider close methods should not intentionally raise errors.
+        Specifically, if a dependency has transactions, the transaction should
+        be committed or rolled back before close is called, and not left as an
+        operation to be called during the close phase.
+
+        Provider close methods must not take an argument; an injector cannot
+        apply provided values on a close method since some providers may have
+        already been closed. If an injected value is needed for the close
+        method, annotate ``__init__`` and access the value via `self`.
+        """
 
 
 class GeneratorProvider(Provider):
@@ -438,11 +449,6 @@ class Injector(object):
     def close(self):
         """Close injector & injected Provider instances, including generators.
 
-        Provider close methods should not intentionally raise errors.
-        Specifically, if a dependency has transactions, the transaction should
-        be committed or rolled back before close is called, and not left as an
-        operation to be called during the close phase.
-
         Providers are closed in the reverse order in which they were opened,
         and each provider is only closed once. Providers are only closed if
         they have successfully provided a dependency via get.
@@ -453,7 +459,8 @@ class Injector(object):
             if basenote not in self.instances:
                 # Provider is not an instance; no close implementation.
                 continue
-            self.apply_regardless(self.instances[basenote].close)
+            # Note: Unable to apply injector on close method.
+            self.instances[basenote].close()
         self.closed = True
 
     def prepare_callable(self, fn):
@@ -504,7 +511,13 @@ class Injector(object):
         if basenote in self.instances:
             provider_or_fn = self.instances[basenote]
         elif inspect.isclass(provider_or_fn):
-            provider_or_fn = provider_or_fn()
+            # Inject class __init__, if annotated.
+            cls = provider_or_fn
+            if hasattr(cls, '__init__') and self.has_annotations(cls.__init__):
+                args, kwargs = self.prepare_callable(cls.__init__)
+                provider_or_fn = provider_or_fn(*args, **kwargs)
+            else:
+                provider_or_fn = provider_or_fn()
             self.instances[basenote] = provider_or_fn
         elif inspect.isgeneratorfunction(provider_or_fn):
             provider_or_fn, value = self.init_generator(provider_or_fn)

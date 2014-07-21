@@ -117,6 +117,16 @@ key-value store).
 
 By default, does nothing. Close objects as needed in subclass.
 
+Provider close methods should not intentionally raise errors.
+Specifically, if a dependency has transactions, the transaction should
+be committed or rolled back before close is called, and not left as an
+operation to be called during the close phase.
+
+Provider close methods must not take an argument; an injector cannot
+apply provided values on a close method since some providers may have
+already been closed. If an injected value is needed for the close
+method, annotate ``__init__`` and access the value via `self`.
+
 
 ``Injector``
 ------------
@@ -246,11 +256,6 @@ Resolve a single note into an object.
 ------------------------
 
 Close injector & injected Provider instances, including generators.
-
-Provider close methods should not intentionally raise errors.
-Specifically, if a dependency has transactions, the transaction should
-be committed or rolled back before close is called, and not left as an
-operation to be called during the close phase.
 
 Providers are closed in the reverse order in which they were opened,
 and each provider is only closed once. Providers are only closed if

@@ -306,6 +306,19 @@ def spam_eggs(spam, eggs, name=None):
     return ' '.join((spam, eggs))
 
 
+class AnnotatedInitProvider(jeni.Provider):
+    @jeni.annotate('spam:4')
+    def __init__(self, spam):
+        self.foo = None
+        self.spam = spam
+
+    def get(self):
+        return self
+
+    def close(self):
+        self.foo = self.spam
+
+
 class AnnotatedProviderTestCase(unittest.TestCase):
     def test_spam_eggs(self):
         class Injector(BasicInjector):
@@ -324,6 +337,16 @@ class AnnotatedProviderTestCase(unittest.TestCase):
             yield spam
         injector = Injector()
         self.assertEqual('spam', injector.get('spammish'))
+
+    def test_annotated_init(self):
+        class Injector(BasicInjector):
+            pass
+        Injector.provider('annotated_init', AnnotatedInitProvider)
+        injector = Injector()
+        provider = injector.get('annotated_init')
+        self.assertEqual(None, provider.foo)
+        injector.close()
+        self.assertEqual('spamspamspamspam', provider.foo)
 
 
 class MaybeTestCase(unittest.TestCase):
@@ -515,15 +538,12 @@ class UnsetProvider(jeni.Provider):
 
 @CloseTestInjector.provider('annotated_close')
 class AnnotatedCloseProvider(jeni.Provider):
-    def __init__(self):
-        self.foo = None
-
     def get(self):
         return self
 
     @jeni.annotate('echo:bar')
     def close(self, echo):
-        self.foo = echo
+        "This should raise TypeError."
 
 
 CloseTestInjector.factory('echo', echo)
@@ -595,10 +615,9 @@ class ClosingTestCase(unittest.TestCase):
         self.assertRaises(RuntimeError, self.injector.get, 'echo:thing')
 
     def test_annotated_close(self):
-        provider = self.injector.get('annotated_close')
-        self.assertEqual(None, provider.foo)
-        self.injector.close()
-        self.assertEqual('bar', provider.foo)
+        self.injector.get('annotated_close')
+        # Injector.close does not apply annotations.
+        self.assertRaises(TypeError, self.injector.close)
 
 
 class InjectorStatsTestCase(unittest.TestCase):
