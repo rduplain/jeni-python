@@ -209,44 +209,45 @@ class Annotator(object):
                 raise AttributeError(msg.format(fn))
             self.set_annotations(fn, **fn.__annotations__)
             return fn
-        def decorator(fn):
-            self.set_annotations(fn, *notes, **keyword_notes)
-            return fn
+        def decorator(__fn):
+            self.set_annotations(__fn, *notes, **keyword_notes)
+            return __fn
         return decorator
 
     # When getting or setting annotations, check callable for __func__. If
     # found, the callable is a method, and the __func__ as function object
     # should be used instead.
 
-    def get_annotations(self, fn):
+    def get_annotations(self, __fn):
         """Get the annotations of a given callable."""
-        if hasattr(fn, '__func__'):
-            fn = fn.__func__
-        if hasattr(fn, '__notes__'):
-            return fn.__notes__
-        raise AttributeError('{!r} does not have annotations'.format(fn))
+        if hasattr(__fn, '__func__'):
+            __fn = __fn.__func__
+        if hasattr(__fn, '__notes__'):
+            return __fn.__notes__
+        raise AttributeError('{!r} does not have annotations'.format(__fn))
 
-    def set_annotations(self, fn, *notes, **keyword_notes):
+    def set_annotations(self, __fn, *notes, **keyword_notes):
         """Set the annotations on the given callable."""
-        if hasattr(fn, '__func__'):
-            fn = fn.__func__
-        if hasattr(fn, '__notes__'):
-            raise AttributeError('callable already has notes: {!r}'.format(fn))
-        fn.__notes__ = (notes, keyword_notes)
+        if hasattr(__fn, '__func__'):
+            __fn = __fn.__func__
+        if hasattr(__fn, '__notes__'):
+            msg = 'callable already has notes: {!r}'
+            raise AttributeError(msg.format(__fn))
+        __fn.__notes__ = (notes, keyword_notes)
 
-    def has_annotations(self, fn):
+    def has_annotations(self, __fn):
         """True if callable is annotated, else False."""
         try:
-            self.get_annotations(fn)
+            self.get_annotations(__fn)
         except AttributeError:
             return False
         return True
 
     @staticmethod
-    def wraps(fn, **kw):
+    def wraps(__fn, **kw):
         """Like ``functools.wraps``, with support for annotations."""
         kw['assigned'] = kw.get('assigned', WRAPPER_ASSIGNMENTS)
-        return functools.wraps(fn, **kw)
+        return functools.wraps(__fn, **kw)
 
     def maybe(self, note):
         """Wrap a keyword note to record that its resolution is optional.
@@ -264,7 +265,7 @@ class Annotator(object):
         return (MAYBE, note)
 
     @staticmethod
-    def partial(fn, *a, **kw):
+    def partial(__fn, *a, **kw):
         """Wrap a note for injection of a partially applied function.
 
         This allows for annotated functions to be injected for composition::
@@ -284,16 +285,16 @@ class Annotator(object):
         injected partial function is called. See `eager_partial` to inject
         eagerly.
         """
-        return (PARTIAL, (fn, a, tuple(kw.items())))
+        return (PARTIAL, (__fn, a, tuple(kw.items())))
 
     @staticmethod
-    def eager_partial(fn, *a, **kw):
+    def eager_partial(__fn, *a, **kw):
         """Wrap a note for injection of an eagerly partially applied function.
 
         Use this instead of `partial` when eager injection is needed in place
         of lazy injection.
         """
-        return (EAGER_PARTIAL, (fn, a, tuple(kw.items())))
+        return (EAGER_PARTIAL, (__fn, a, tuple(kw.items())))
 
 
 annotate = Annotator()

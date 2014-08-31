@@ -192,6 +192,20 @@ class BasicInjectorAnnotationTestCase(unittest.TestCase):
         jeni.annotate(fn)
         self.assertTrue(jeni.annotate.has_annotations(fn))
 
+    def test_annotate_fn_name_keyword(self):
+        # Test that annotation of 'fn' is not accidentally reserved by jeni.
+        def foo(fn=None):
+            "unused"
+        decorator = jeni.annotate(fn='function')
+
+        try:
+            decorator(foo)
+            raise TypeError('code coverage support')
+        except TypeError:
+            _, err, _ = sys.exc_info()
+            msg = "Annotation cannot support argument named 'fn'."
+            if 'coverage' not in str(err): self.fail(msg)
+
 
 class SubInjectorAnnotationTestCase(BasicInjectorAnnotationTestCase):
     def setUp(self):
