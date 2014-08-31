@@ -218,7 +218,8 @@ class Annotator(object):
     # found, the callable is a method, and the __func__ as function object
     # should be used instead.
 
-    def get_annotations(self, __fn):
+    @classmethod
+    def get_annotations(cls, __fn):
         """Get the annotations of a given callable."""
         if hasattr(__fn, '__func__'):
             __fn = __fn.__func__
@@ -226,7 +227,8 @@ class Annotator(object):
             return __fn.__notes__
         raise AttributeError('{!r} does not have annotations'.format(__fn))
 
-    def set_annotations(self, __fn, *notes, **keyword_notes):
+    @classmethod
+    def set_annotations(cls, __fn, *notes, **keyword_notes):
         """Set the annotations on the given callable."""
         if hasattr(__fn, '__func__'):
             __fn = __fn.__func__
@@ -235,10 +237,11 @@ class Annotator(object):
             raise AttributeError(msg.format(__fn))
         __fn.__notes__ = (notes, keyword_notes)
 
-    def has_annotations(self, __fn):
+    @classmethod
+    def has_annotations(cls, __fn):
         """True if callable is annotated, else False."""
         try:
-            self.get_annotations(__fn)
+            cls.get_annotations(__fn)
         except AttributeError:
             return False
         return True
@@ -249,7 +252,8 @@ class Annotator(object):
         kw['assigned'] = kw.get('assigned', WRAPPER_ASSIGNMENTS)
         return functools.wraps(__fn, **kw)
 
-    def maybe(self, note):
+    @staticmethod
+    def maybe(note):
         """Wrap a keyword note to record that its resolution is optional.
 
         Normally all annotations require fulfilled dependencies, but if a
