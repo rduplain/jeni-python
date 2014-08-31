@@ -77,6 +77,9 @@ On Python 3, use either decorators or function annotations::
     def function(foo: 'foo', bar: 'bar'):
         return
 
+Note that when using Python function annotations, all injected values
+are provided as keyword arguments.
+
 Since function annotations could be interpreted differently by
 different packages, injectors do not use ``function.__annotations__``
 directly. Functions opt in by a simple ``@annotate``
@@ -247,6 +250,10 @@ Keyword arguments are resolved in this order (later override earlier):
 1. keyword arguments provided by injector
 2. keyword arguments provided in `partial_fn = partial(fn, **kwargs)`
 3. keyword arguments provided in `partial_fn(**kargs)`
+
+Note that Python function annotations (in Python 3) are injected as
+keyword arguments, as documented in `annotate`, which affects the
+argument order here.
 
 `annotate.partial` accepts arguments in same manner as this `partial`.
 

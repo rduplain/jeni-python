@@ -183,6 +183,9 @@ class Annotator(object):
             def function(foo: 'foo', bar: 'bar'):
                 return
 
+        Note that when using Python function annotations, all injected values
+        are provided as keyword arguments.
+
         Since function annotations could be interpreted differently by
         different packages, injectors do not use ``function.__annotations__``
         directly. Functions opt in by a simple ``@annotate``
@@ -448,8 +451,11 @@ class Injector(object):
         2. keyword arguments provided in `partial_fn = partial(fn, **kwargs)`
         3. keyword arguments provided in `partial_fn(**kargs)`
 
-        `annotate.partial` accepts arguments in same manner as this `partial`.
+        Note that Python function annotations (in Python 3) are injected as
+        keyword arguments, as documented in `annotate`, which affects the
+        argument order here.
 
+        `annotate.partial` accepts arguments in same manner as this `partial`.
         """
         self.get_annotations(fn) # Assert has annotations.
         def lazy_injection_fn(*run_args, **run_kwargs):
