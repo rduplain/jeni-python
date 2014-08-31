@@ -349,6 +349,31 @@ class AnnotatedProviderTestCase(unittest.TestCase):
         self.assertEqual('spamspamspamspam', provider.foo)
 
 
+class WrapsTestCase(unittest.TestCase):
+    def setUp(self):
+        @jeni.annotate('spam')
+        def foo(spam):
+            "Foo the spam."
+            return spam
+        self.foo = foo
+        @jeni.wraps(foo)
+        def wrapper(spam):
+            return ('spam', spam)
+        self.wrapper = wrapper
+        self.injector = BasicInjector()
+
+    def test_has_annotations(self):
+        self.assertTrue(jeni.annotate.has_annotations(self.wrapper))
+
+    def test_name_and_doc(self):
+        self.assertEqual('foo', self.wrapper.__name__)
+        self.assertEqual('Foo the spam.', self.wrapper.__doc__)
+
+    def test_injection(self):
+        self.assertEqual('spam', self.injector.apply(self.foo))
+        self.assertEqual(('spam', 'spam'), self.injector.apply(self.wrapper))
+
+
 class MaybeTestCase(unittest.TestCase):
     def setUp(self):
         self.note = jeni.maybe('the_real_note')

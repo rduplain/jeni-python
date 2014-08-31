@@ -95,6 +95,9 @@ Core API
 Additional API
 ==============
 
+.. eval:: insert_doc(Annotator.wraps, name='annotate.wraps', u='-')
+
+
 .. eval:: insert_doc(Annotator.maybe, name='annotate.maybe', u='-')
 
 

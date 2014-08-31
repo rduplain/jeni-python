@@ -279,6 +279,12 @@ Exit context-manager without with-block. See also: `enter`.
 Additional API
 ==============
 
+``annotate.wraps``
+------------------
+
+Like ``functools.wraps``, with support for annotations.
+
+
 ``annotate.maybe``
 ------------------
 

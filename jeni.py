@@ -18,6 +18,7 @@ import six
 
 MAYBE = 'maybe'
 PARTIAL = 'partial'
+WRAPPER_ASSIGNMENTS = functools.WRAPPER_ASSIGNMENTS + ('__notes__',)
 
 
 
@@ -237,6 +238,12 @@ class Annotator(object):
             return False
         return True
 
+    @staticmethod
+    def wraps(fn, **kw):
+        """Like ``functools.wraps``, with support for annotations."""
+        kw['assigned'] = kw.get('assigned', WRAPPER_ASSIGNMENTS)
+        return functools.wraps(fn, **kw)
+
     def maybe(self, note):
         """Wrap a keyword note to record that its resolution is optional.
 
@@ -272,6 +279,7 @@ class Annotator(object):
 
 
 annotate = Annotator()
+wraps = annotate.wraps
 maybe = annotate.maybe
 partial = annotate.partial
 
