@@ -74,10 +74,16 @@ Core API
 .. eval:: insert_args_doc(Injector.partial, **opt)
 
 
+.. eval:: insert_args_doc(Injector.eager_partial, **opt)
+
+
 .. eval:: insert_args_doc(Injector.apply_regardless, **opt)
 
 
 .. eval:: insert_args_doc(Injector.partial_regardless, **opt)
+
+
+.. eval:: insert_args_doc(Injector.eager_partial_regardless, **opt)
 
 
 .. eval:: insert_args_doc(Injector.get, **opt)
@@ -95,13 +101,16 @@ Core API
 Additional API
 ==============
 
-.. eval:: insert_doc(Annotator.wraps, name='annotate.wraps', u='-')
+.. eval:: insert_doc(Annotator.wraps, name='annotate.wraps')
 
 
-.. eval:: insert_doc(Annotator.maybe, name='annotate.maybe', u='-')
+.. eval:: insert_doc(Annotator.maybe, name='annotate.maybe')
 
 
-.. eval:: insert_doc(Annotator.partial, name='annotate.partial', u='-')
+.. eval:: insert_doc(Annotator.partial, name='annotate.partial')
+
+
+.. eval:: insert_doc(Annotator.eager_partial, name='annotate.eager_partial')
 
 
 .. exec:: from jeni import InjectorProxy

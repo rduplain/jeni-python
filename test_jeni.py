@@ -162,6 +162,12 @@ class BasicInjectorAnnotationTestCase(unittest.TestCase):
     def test_partial(self):
         fn = self.injector.partial(self.fn)
         self.assertEqual(0, fn())
+        self.assertEqual(0, fn())
+
+    def test_eager_partial(self):
+        fn = self.injector.eager_partial(self.fn)
+        self.assertEqual(0, fn())
+        self.assertEqual(0, fn())
 
     def test_not_registered(self):
         @jeni.annotate('hello', 'nothing')
@@ -272,6 +278,14 @@ class ApplyScenariosTestCase(unittest.TestCase):
             AttributeError,
             self.injector.partial, self.fn_not_annotated)
 
+    def test_eager_partial(self):
+        self.assertEqual(
+            ('Hello, world!', (), {}),
+            self.injector.eager_partial(self.fn_annotated)())
+        self.assertRaises(
+            AttributeError,
+            self.injector.eager_partial, self.fn_not_annotated)
+
     def test_additional_arguments_partial(self):
         self.assertEqual(
             ('Hello, world!', ('a', 'b'), {'letter': 'c'}),
@@ -287,6 +301,14 @@ class ApplyScenariosTestCase(unittest.TestCase):
         self.assertEqual(
             ((), {}),
             self.injector.partial_regardless(self.fn_not_annotated)())
+
+    def test_eager_partial_regardless(self):
+        self.assertEqual(
+            ('Hello, world!', (), {}),
+            self.injector.eager_partial_regardless(self.fn_annotated)())
+        self.assertEqual(
+            ((), {}),
+            self.injector.eager_partial_regardless(self.fn_not_annotated)())
 
     def test_additional_arguments_partial_regardless(self):
         self.assertEqual(
@@ -384,11 +406,34 @@ class MaybeTestCase(unittest.TestCase):
 
 class PartialNoteTestCase(unittest.TestCase):
     def setUp(self):
-        self.fn = lambda: None
+        self.fn = lambda a, b, c: None
         self.note = jeni.partial(self.fn)
+        self.note_with_args = jeni.partial(self.fn, 'a', 'bee', c='cee')
 
     def test_partial(self):
-        self.assertEqual((jeni.PARTIAL, self.fn), self.note)
+        # (PARTIAL, (function, args, kwargs_items_tuple))
+        self.assertEqual((jeni.PARTIAL, (self.fn, (), ())), self.note)
+
+    def test_partial_with_args(self):
+        self.assertEqual(
+            (jeni.PARTIAL, (self.fn, ('a', 'bee'), (('c', 'cee'),))),
+            self.note_with_args)
+
+
+class EagerPartialNoteTestCase(unittest.TestCase):
+    def setUp(self):
+        self.fn = lambda a, b, c: None
+        self.note = jeni.eager_partial(self.fn)
+        self.note_with_args = jeni.eager_partial(self.fn, 'a', 'bee', c='cee')
+
+    def test_partial(self):
+        # (EAGER_PARTIAL, (function, args, kwargs_items_tuple))
+        self.assertEqual((jeni.EAGER_PARTIAL, (self.fn, (), ())), self.note)
+
+    def test_partial_with_args(self):
+        self.assertEqual(
+            (jeni.EAGER_PARTIAL, (self.fn, ('a', 'bee'), (('c', 'cee'),))),
+            self.note_with_args)
 
 
 @BasicInjector.factory('error')
@@ -479,8 +524,13 @@ def hello_partial(hello):
 
 
 @jeni.annotate('hello:again', jeni.annotate.partial(hello_partial))
-def hello_again_partial(hello, fn):
-    return hello, fn()
+def hello_again_partial(hello, fn, **keywords):
+    return hello, fn(), keywords
+
+
+@jeni.annotate('hello:again', jeni.annotate.eager_partial(hello_partial))
+def hello_again_eager_partial(hello, fn, **keywords):
+    return hello, fn(), keywords
 
 
 class InjectPartialTestCase(unittest.TestCase):
@@ -489,8 +539,58 @@ class InjectPartialTestCase(unittest.TestCase):
 
     def test_partial_injection(self):
         self.assertEqual(
-            ('Hello, again!', 'Hello, partial!'),
-            self.injector.apply(hello_again_partial))
+            ('Hello, again!', 'Hello, partial!', {'c': 'cee'}),
+            self.injector.apply(hello_again_partial, c='cee'))
+
+    def test_eager_partial_injection(self):
+        self.assertEqual(
+            ('Hello, again!', 'Hello, partial!', {'c': 'cee'}),
+            self.injector.apply(hello_again_eager_partial, c='cee'))
+
+
+class LazyPartialTestCase(unittest.TestCase):
+    def setUp(self):
+        self.injector = BasicInjector()
+
+    def test_partial(self):
+        note = 'hello:partial'
+        self.assertEqual(0, self.injector.stats[note])
+        fn = self.injector.partial(hello_partial)
+        self.assertEqual(0, self.injector.stats[note])
+        fn()
+        self.assertEqual(1, self.injector.stats[note])
+        fn()
+        self.assertEqual(1, self.injector.stats[note])
+
+    def test_eager_partial(self):
+        note = 'hello:partial'
+        self.assertEqual(0, self.injector.stats[note])
+        fn = self.injector.eager_partial(hello_partial)
+        self.assertEqual(1, self.injector.stats[note])
+        fn()
+        self.assertEqual(1, self.injector.stats[note])
+        fn()
+        self.assertEqual(1, self.injector.stats[note])
+
+    def test_partial_injection(self):
+        note = 'hello:partial'
+        self.assertEqual(0, self.injector.stats[note])
+        fn = self.injector.partial(hello_again_partial)
+        self.assertEqual(0, self.injector.stats[note])
+        fn()
+        self.assertEqual(1, self.injector.stats[note])
+        fn()
+        self.assertEqual(1, self.injector.stats[note])
+
+    def test_eager_partial_injection(self):
+        note = 'hello:partial'
+        self.assertEqual(0, self.injector.stats[note])
+        fn = self.injector.eager_partial(hello_again_eager_partial)
+        self.assertEqual(1, self.injector.stats[note])
+        fn()
+        self.assertEqual(1, self.injector.stats[note])
+        fn()
+        self.assertEqual(1, self.injector.stats[note])
 
 
 class CloseMe(object):

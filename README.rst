@@ -228,22 +228,60 @@ Supports base notes only, does not support get-by-name notes.
 Fully apply annotated callable, returning callable's result.
 
 
-``Injector.partial(self, fn, *a, **kw)``
-----------------------------------------
+``Injector.partial(self, fn, *user_args, **user_kwargs)``
+---------------------------------------------------------
+
+Return function with closure to lazily inject annotated callable.
+
+Repeat calls to the resulting function will reuse injections from the
+first call.
+
+Positional arguments are provided in this order:
+
+1. positional arguments provided by injector
+2. positional arguments provided in `partial_fn = partial(fn, *args)`
+3. positional arguments provided in `partial_fn(*args)`
+
+Keyword arguments are resolved in this order (later override earlier):
+
+1. keyword arguments provided by injector
+2. keyword arguments provided in `partial_fn = partial(fn, **kwargs)`
+3. keyword arguments provided in `partial_fn(**kargs)`
+
+`annotate.partial` accepts arguments in same manner as this `partial`.
+
+
+``Injector.eager_partial(self, fn, *a, **kw)``
+----------------------------------------------
 
 Partially apply annotated callable, returning a partial function.
+
+By default, `partial` is lazy so that injections only happen when they
+are needed. Use `eager_partial` in place of `partial` when a guarantee
+of injection is needed at the time the partially applied function is
+created.
+
+`eager_partial` resolves arguments similarly to `partial` but relies on
+`functools.partial` for argument resolution when calling the final
+partial function.
 
 
 ``Injector.apply_regardless(self, fn, *a, **kw)``
 -------------------------------------------------
 
-Like `apply`, but applies even if callable is not annotated.
+Like `apply`, but applies if callable is not annotated.
 
 
 ``Injector.partial_regardless(self, fn, *a, **kw)``
 ---------------------------------------------------
 
-Like `partial`, but applies even if callable is not annotated.
+Like `partial`, but applies if callable is not annotated.
+
+
+``Injector.eager_partial_regardless(self, fn, *a, **kw)``
+---------------------------------------------------------
+
+Like `eager_partial`, but applies if callable is not annotated.
 
 
 ``Injector.get(self, note)``
@@ -318,6 +356,19 @@ This allows for annotated functions to be injected for composition::
     def bazquux(foo, fn):
         # fn: injector.partial(foobar)
         return
+
+Injections on the partial function are lazy and not applied until the
+injected partial function is called. See `eager_partial` to inject
+eagerly.
+
+
+``annotate.eager_partial``
+--------------------------
+
+Wrap a note for injection of an eagerly partially applied function.
+
+Use this instead of `partial` when eager injection is needed in place
+of lazy injection.
 
 
 ``InjectorProxy``

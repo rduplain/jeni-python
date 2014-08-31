@@ -18,6 +18,7 @@ import six
 
 MAYBE = 'maybe'
 PARTIAL = 'partial'
+EAGER_PARTIAL = 'eager_partial'
 WRAPPER_ASSIGNMENTS = functools.WRAPPER_ASSIGNMENTS + ('__notes__',)
 
 
@@ -259,7 +260,8 @@ class Annotator(object):
         """
         return (MAYBE, note)
 
-    def partial(self, fn):
+    @staticmethod
+    def partial(fn, *a, **kw):
         """Wrap a note for injection of a partially applied function.
 
         This allows for annotated functions to be injected for composition::
@@ -274,14 +276,28 @@ class Annotator(object):
             def bazquux(foo, fn):
                 # fn: injector.partial(foobar)
                 return
+
+        Injections on the partial function are lazy and not applied until the
+        injected partial function is called. See `eager_partial` to inject
+        eagerly.
         """
-        return (PARTIAL, fn)
+        return (PARTIAL, (fn, a, tuple(kw.items())))
+
+    @staticmethod
+    def eager_partial(fn, *a, **kw):
+        """Wrap a note for injection of an eagerly partially applied function.
+
+        Use this instead of `partial` when eager injection is needed in place
+        of lazy injection.
+        """
+        return (EAGER_PARTIAL, (fn, a, tuple(kw.items())))
 
 
 annotate = Annotator()
 wraps = annotate.wraps
 maybe = annotate.maybe
 partial = annotate.partial
+eager_partial = annotate.eager_partial
 
 
 class Injector(object):
@@ -414,22 +430,79 @@ class Injector(object):
         args += a; kwargs.update(kw)
         return fn(*args, **kwargs)
 
-    def partial(self, fn, *a, **kw):
-        """Partially apply annotated callable, returning a partial function."""
+    def partial(self, fn, *user_args, **user_kwargs):
+        """Return function with closure to lazily inject annotated callable.
+
+        Repeat calls to the resulting function will reuse injections from the
+        first call.
+
+        Positional arguments are provided in this order:
+
+        1. positional arguments provided by injector
+        2. positional arguments provided in `partial_fn = partial(fn, *args)`
+        3. positional arguments provided in `partial_fn(*args)`
+
+        Keyword arguments are resolved in this order (later override earlier):
+
+        1. keyword arguments provided by injector
+        2. keyword arguments provided in `partial_fn = partial(fn, **kwargs)`
+        3. keyword arguments provided in `partial_fn(**kargs)`
+
+        `annotate.partial` accepts arguments in same manner as this `partial`.
+
+        """
+        self.get_annotations(fn) # Assert has annotations.
+        def lazy_injection_fn(*run_args, **run_kwargs):
+            arg_pack = getattr(lazy_injection_fn, 'arg_pack', None)
+            if arg_pack is not None:
+                pack_args, pack_kwargs = arg_pack
+            else:
+                jeni_args, jeni_kwargs = self.prepare_callable(fn)
+                pack_args = jeni_args + user_args
+                pack_kwargs = {}
+                pack_kwargs.update(jeni_kwargs)
+                pack_kwargs.update(user_kwargs)
+                lazy_injection_fn.arg_pack = (pack_args, pack_kwargs)
+            final_args = pack_args + run_args
+            final_kwargs = {}
+            final_kwargs.update(pack_kwargs)
+            final_kwargs.update(run_kwargs)
+            return fn(*final_args, **final_kwargs)
+        return lazy_injection_fn
+
+    def eager_partial(self, fn, *a, **kw):
+        """Partially apply annotated callable, returning a partial function.
+
+        By default, `partial` is lazy so that injections only happen when they
+        are needed. Use `eager_partial` in place of `partial` when a guarantee
+        of injection is needed at the time the partially applied function is
+        created.
+
+        `eager_partial` resolves arguments similarly to `partial` but relies on
+        `functools.partial` for argument resolution when calling the final
+        partial function.
+        """
         args, kwargs = self.prepare_callable(fn)
         args += a; kwargs.update(kw)
         return functools.partial(fn, *args, **kwargs)
 
     def apply_regardless(self, fn, *a, **kw):
-        """Like `apply`, but applies even if callable is not annotated."""
+        """Like `apply`, but applies if callable is not annotated."""
         if self.has_annotations(fn):
             return self.apply(fn, *a, **kw)
         return fn(*a, **kw)
 
     def partial_regardless(self, fn, *a, **kw):
-        """Like `partial`, but applies even if callable is not annotated."""
+        """Like `partial`, but applies if callable is not annotated."""
         if self.has_annotations(fn):
             return self.partial(fn, *a, **kw)
+        else:
+            return functools.partial(fn, *a, **kw)
+
+    def eager_partial_regardless(self, fn, *a, **kw):
+        """Like `eager_partial`, but applies if callable is not annotated."""
+        if self.has_annotations(fn):
+            return self.eager_partial(fn, *a, **kw)
         return functools.partial(fn, *a, **kw)
 
     def get(self, note):
@@ -441,8 +514,13 @@ class Injector(object):
         self.stats[note] += 1
 
         # Handle injection of partially applied annotated functions.
-        if isinstance(note, tuple) and len(note) == 2 and note[0] == PARTIAL:
-            return self.partial(note[1])
+        if isinstance(note, tuple) and len(note) == 2:
+            if note[0] == PARTIAL:
+                fn, a, kw_items = note[1]
+                return self.partial(fn, *a, **dict(kw_items))
+            elif note[0] == EAGER_PARTIAL:
+                fn, a, kw_items = note[1]
+                return self.eager_partial(fn, *a, **dict(kw_items))
 
         basenote, name = self.parse_note(note)
         if name is None and basenote in self.values:
