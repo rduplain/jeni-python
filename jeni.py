@@ -285,6 +285,12 @@ class Annotator(object):
                 # fn: injector.partial(foobar)
                 return
 
+        Keyword arguments are treated as `maybe` when using partial, in order
+        to allow partial application of only the notes which can be provided,
+        where the caller could then apply arguments known to be unavailable in
+        the injector. Note that with Python 3 function annotations, all
+        annotations are injected as keyword arguments.
+
         Injections on the partial function are lazy and not applied until the
         injected partial function is called. See `eager_partial` to inject
         eagerly.
@@ -468,7 +474,7 @@ class Injector(object):
             if arg_pack is not None:
                 pack_args, pack_kwargs = arg_pack
             else:
-                jeni_args, jeni_kwargs = self.prepare_callable(fn)
+                jeni_args, jeni_kwargs = self.prepare_callable(fn, partial=True)
                 pack_args = jeni_args + user_args
                 pack_kwargs = {}
                 pack_kwargs.update(jeni_kwargs)
@@ -493,7 +499,7 @@ class Injector(object):
         `functools.partial` for argument resolution when calling the final
         partial function.
         """
-        args, kwargs = self.prepare_callable(fn)
+        args, kwargs = self.prepare_callable(fn, partial=True)
         args += a; kwargs.update(kw)
         return functools.partial(fn, *args, **kwargs)
 
@@ -560,14 +566,14 @@ class Injector(object):
             self.instances[basenote].close()
         self.closed = True
 
-    def prepare_callable(self, fn):
+    def prepare_callable(self, fn, partial=False):
         """Prepare arguments required to apply function."""
         notes, keyword_notes = self.get_annotations(fn)
-        args, kwargs = self.prepare_notes(*notes, **keyword_notes)
-        return args, kwargs
+        return self.prepare_notes(*notes, __partial=partial, **keyword_notes)
 
     def prepare_notes(self, *notes, **keyword_notes):
         """Get injection values for all given notes."""
+        __partial = keyword_notes.pop('__partial', False)
         args = tuple(self.get(note) for note in notes)
         kwargs = {}
         for arg in keyword_notes:
@@ -575,6 +581,11 @@ class Injector(object):
             if isinstance(note, tuple) and len(note) == 2 and note[0] == MAYBE:
                 try:
                     kwargs[arg] = self.get(note[1])
+                except LookupError:
+                    continue
+            elif __partial:
+                try:
+                    kwargs[arg] = self.get(note)
                 except LookupError:
                     continue
             else:

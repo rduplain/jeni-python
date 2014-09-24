@@ -250,6 +250,11 @@ class ApplyScenariosTestCase(unittest.TestCase):
             return a, kw
         self.fn_not_annotated = fn_not_annotated
 
+        @jeni.annotate(a='doesnotexist1', b='doesnotexist2', c='hello')
+        def fn_with_lookup_error(a, b, c=None):
+            return a, b, c
+        self.fn_with_lookup_error = fn_with_lookup_error
+
     def test_apply(self):
         self.assertEqual(
             ('Hello, world!', (), {}),
@@ -307,6 +312,22 @@ class ApplyScenariosTestCase(unittest.TestCase):
         self.assertRaises(
             AttributeError,
             self.injector.partial, self.fn_not_annotated, 'a', 'b', letter='c')
+
+    def test_partial_as_maybe(self):
+        self.assertEqual(
+            ('a', 'b', 'Hello, world!'),
+            self.injector.partial(self.fn_with_lookup_error, 'a', 'b')())
+        self.assertEqual(
+            ('a', 'b', 'Hello, world!'),
+            self.injector.partial(self.fn_with_lookup_error)('a', 'b'))
+
+    def test_eager_partial_as_maybe(self):
+        self.assertEqual(
+            ('a', 'b', 'Hello, world!'),
+            self.injector.eager_partial(self.fn_with_lookup_error, 'a', 'b')())
+        self.assertEqual(
+            ('a', 'b', 'Hello, world!'),
+            self.injector.eager_partial(self.fn_with_lookup_error)('a', 'b'))
 
     def test_partial_regardless(self):
         self.assertEqual(
