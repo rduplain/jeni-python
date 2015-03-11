@@ -130,6 +130,20 @@ class BasicInjectorTestCase(unittest.TestCase):
         self.assertEqual('eggs!', injector.get('eggs'))
 
 
+class InjectSelfTestCase(unittest.TestCase):
+    def test_provide_self_default(self):
+        self.injector = jeni.Injector()
+        self.assertRaises(LookupError, self.injector.get, 'injector')
+
+    def test_provide_self_true(self):
+        self.injector = jeni.Injector(provide_self=True)
+        self.assertEqual(self.injector, self.injector.get('injector'))
+
+    def test_provide_self_false(self):
+        self.injector = jeni.Injector(provide_self=False)
+        self.assertRaises(LookupError, self.injector.get, 'injector')
+
+
 class SubInjectorTestCase(BasicInjectorTestCase):
     def setUp(self):
         self.injector = SubInjector()

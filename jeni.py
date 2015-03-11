@@ -320,8 +320,8 @@ class Injector(object):
     generator_provider = GeneratorProvider
     re_note = re.compile(r'^(.*?)(?::(.*))?$') # annotation is 'object:name'
 
-    def __init__(self):
-        """An Injector could take arguments to init, but this base does not.
+    def __init__(self, provide_self=False):
+        """A subclass could take arguments, but should pass keywords to super.
 
         An Injector subclass inherits the provider registry of its base
         classes, but can override any provider by re-registering notes. When
@@ -335,7 +335,22 @@ class Injector(object):
 
             class Injector(BaseInjector):
                 "Subclass provides namespace when registering providers."
+
+        By default, the injector does not provide itself, but will when asked::
+
+            injector = Injector(provide_self=True)
+            injector.get('injector')
+
+        This is useful in a context manager::
+
+            with Injector(provide_self=True) as injector:
+                injector.get('injector')
+
+        Annotate with note 'injector' to inject the injector.
         """
+        if provide_self:
+            self.value('injector', self)
+
         self.annotator = self.annotator_class()
 
         self.closed = False
