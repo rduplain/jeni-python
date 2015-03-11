@@ -415,6 +415,6 @@ Get by name can use dict-style access::
 License
 =======
 
-Copyright 2013-2014 Ron DuPlain <ron.duplain@gmail.com> (see AUTHORS file).
+Copyright 2013-2015 Ron DuPlain <ron.duplain@gmail.com> (see AUTHORS file).
 
 Released under the BSD License (see LICENSE file).
