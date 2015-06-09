@@ -204,7 +204,7 @@ class Annotator(object):
         if not keyword_notes and len(notes) == 1 and is_callable(notes[0]):
             # Here @annotate is being used without arguments.
             fn = notes[0]
-            if not getattr(fn, '__annotations__', None):
+            if not hasattr(fn, '__annotations__'):
                 msg = '{!r} does not have annotations'
                 raise AttributeError(msg.format(fn))
             self.set_annotations(fn, **fn.__annotations__)
