@@ -571,6 +571,10 @@ class UnsetErrorMessageTestCase(unittest.TestCase):
         self.assertEqual(err.note, 'unset_no_msg')
 
 
+def hello_simple():
+    return 'wat'
+
+
 @jeni.annotate('hello:partial')
 def hello_partial(hello):
     return hello
@@ -581,8 +585,28 @@ def hello_again_partial(hello, fn, **keywords):
     return hello, fn(), keywords
 
 
+@jeni.annotate('hello:again', jeni.annotate.partial_regardless(hello_partial))
+def hello_again_partial_regardless_annotated(hello, fn, **keywords):
+    return hello, fn(), keywords
+
+
+@jeni.annotate('hello:again', jeni.annotate.partial_regardless(hello_simple))
+def hello_again_partial_regardless_unannotated(hello, fn, **keywords):
+    return hello, fn(), keywords
+
+
 @jeni.annotate('hello:again', jeni.annotate.eager_partial(hello_partial))
 def hello_again_eager_partial(hello, fn, **keywords):
+    return hello, fn(), keywords
+
+
+@jeni.annotate('hello:again', jeni.annotate.eager_partial_regardless(hello_partial))
+def hello_again_eager_partial_regardless_annotated(hello, fn, **keywords):
+    return hello, fn(), keywords
+
+
+@jeni.annotate('hello:again', jeni.annotate.eager_partial_regardless(hello_simple))
+def hello_again_eager_partial_regardless_unannotated(hello, fn, **keywords):
     return hello, fn(), keywords
 
 
@@ -595,10 +619,30 @@ class InjectPartialTestCase(unittest.TestCase):
             ('Hello, again!', 'Hello, partial!', {'c': 'cee'}),
             self.injector.apply(hello_again_partial, c='cee'))
 
+    def test_partial_regardless_injection(self):
+        self.assertEqual(
+            ('Hello, again!', 'Hello, partial!', {'c': 'cee'}),
+            self.injector.apply(
+                    hello_again_partial_regardless_annotated, c='cee'))
+        self.assertEqual(
+            ('Hello, again!', 'wat', {'c': 'cee'}),
+            self.injector.apply(
+                    hello_again_partial_regardless_unannotated, c='cee'))
+
     def test_eager_partial_injection(self):
         self.assertEqual(
             ('Hello, again!', 'Hello, partial!', {'c': 'cee'}),
             self.injector.apply(hello_again_eager_partial, c='cee'))
+
+    def test_eager_partial_regardless_injection(self):
+        self.assertEqual(
+            ('Hello, again!', 'Hello, partial!', {'c': 'cee'}),
+            self.injector.apply(
+                    hello_again_eager_partial_regardless_annotated, c='cee'))
+        self.assertEqual(
+            ('Hello, again!', 'wat', {'c': 'cee'}),
+            self.injector.apply(
+                    hello_again_eager_partial_regardless_unannotated, c='cee'))
 
 
 class LazyPartialTestCase(unittest.TestCase):

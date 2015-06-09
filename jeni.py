@@ -18,7 +18,9 @@ import six
 
 MAYBE = 'maybe'
 PARTIAL = 'partial'
+PARTIAL_REGARDLESS = 'partial_regardless'
 EAGER_PARTIAL = 'eager_partial'
+EAGER_PARTIAL_REGARDLESS = 'eager_partial_regardless'
 WRAPPER_ASSIGNMENTS = functools.WRAPPER_ASSIGNMENTS + ('__notes__',)
 
 
@@ -298,6 +300,15 @@ class Annotator(object):
         return (PARTIAL, (__fn, a, tuple(kw.items())))
 
     @staticmethod
+    def partial_regardless(__fn, *a, **kw):
+        """Wrap a note for injection of a partially applied function, or don't.
+
+        Use this instead of `partial` when binding a callable that may or may
+        not have annotations.
+        """
+        return (PARTIAL_REGARDLESS, (__fn, a, tuple(kw.items())))
+
+    @staticmethod
     def eager_partial(__fn, *a, **kw):
         """Wrap a note for injection of an eagerly partially applied function.
 
@@ -306,6 +317,14 @@ class Annotator(object):
         """
         return (EAGER_PARTIAL, (__fn, a, tuple(kw.items())))
 
+    @staticmethod
+    def eager_partial_regardless(__fn, *a, **kw):
+        """Wrap a note for injection of an eagerly partially applied function, or don't.
+        
+        Use this instead of `eager_partial partial` when binding a callable
+        that may or may not have annotations.
+        """
+        return (EAGER_PARTIAL_REGARDLESS, (__fn, a, tuple(kw.items())))
 
 annotate = Annotator()
 wraps = annotate.wraps
@@ -550,9 +569,15 @@ class Injector(object):
             if note[0] == PARTIAL:
                 fn, a, kw_items = note[1]
                 return self.partial(fn, *a, **dict(kw_items))
+            elif note[0] == PARTIAL_REGARDLESS:
+                fn, a, kw_items = note[1]
+                return self.partial_regardless(fn, *a, **dict(kw_items))
             elif note[0] == EAGER_PARTIAL:
                 fn, a, kw_items = note[1]
                 return self.eager_partial(fn, *a, **dict(kw_items))
+            elif note[0] == EAGER_PARTIAL_REGARDLESS:
+                fn, a, kw_items = note[1]
+                return self.eager_partial_regardless(fn, *a, **dict(kw_items))
 
         basenote, name = self.parse_note(note)
         if name is None and basenote in self.values:
