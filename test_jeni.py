@@ -196,14 +196,7 @@ class BasicInjectorAnnotationTestCase(unittest.TestCase):
         self.assertRaises(AttributeError, self.injector.apply, fn)
 
     def test_annotate_without_annotations(self):
-        def fn(hello):
-            "unused"
-        if sys.version_info < (3,):
-            self.assertRaises(AttributeError, jeni.annotate, fn)
-        else:
-            jeni.annotate(fn)
-            self.assertTrue(jeni.annotate.has_annotations(fn))
-
+        # This instrumentation works in both Python 2 & Python 3.
         def fn(hello):
             "unused"
         fn.__annotations__ = {'hello': 'hello:world'}
