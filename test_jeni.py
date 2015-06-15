@@ -26,6 +26,11 @@ def echo(name=None):
     return name
 
 
+@BasicInjector.factory('space')
+def space():
+    return {}
+
+
 BasicInjector.value('zero', 0)
 
 
@@ -80,6 +85,11 @@ class BasicInjectorTestCase(unittest.TestCase):
 
         # This factory does not accept name.
         self.assertRaises(TypeError, self.injector.get, 'eggs:thing')
+
+    def test_factory_identity(self):
+        space1 = self.injector.get('space')
+        space2 = self.injector.get('space')
+        self.assertIs(space1, space2)
 
     def test_factory_with_name(self):
         self.assertEqual(None, self.injector.get('echo'))
@@ -154,6 +164,26 @@ class SubInjectorTestCase(BasicInjectorTestCase):
 
         # This generator does not accept name.
         self.assertRaises(TypeError, self.injector.get, 'answer:thing')
+
+
+class InjectorSubTestCase(BasicInjectorTestCase):
+    def setUp(self):
+        self.injector = BasicInjector()
+
+    def test_subinjector(self):
+        subinjector = self.injector.sub()
+        self.assertIsInstance(subinjector, jeni.Injector)
+
+    def test_subinjector_inheritance(self):
+        injector_class = type(self.injector)
+        subinjector_class = type(self.injector.sub())
+        self.assertTrue(issubclass(subinjector_class, injector_class))
+
+    def test_subinjector_isolation(self):
+        space = self.injector.get('space')
+        subinjector = self.injector.sub()
+        sub_space = subinjector.get('space')
+        self.assertIsNot(space, sub_space)
 
 
 class BasicInjectorAnnotationTestCase(unittest.TestCase):

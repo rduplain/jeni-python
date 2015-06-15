@@ -775,6 +775,14 @@ class Injector(object):
     def has_annotations(self, *a, **kw):
         return self.annotator.has_annotations(*a, **kw)
 
+    @classmethod
+    def sub(cls):
+        """Create and instantiate a sub-injector."""
+        # TODO: Local overrides?
+        class SubInjector(cls):
+            pass
+        return SubInjector()
+
 
 class InjectorProxy(object):
     """Forwards getattr & getitem to enclosed injector.
