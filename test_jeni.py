@@ -1,3 +1,6 @@
+from collections import OrderedDict as odict
+from decimal import Decimal
+from fractions import Fraction
 import sys
 import unittest
 
@@ -44,6 +47,15 @@ def spam():
     count_str = yield 'spam'
     while True:
         count_str = yield 'spam' * int(count_str)
+
+
+class WithOrderedSpace(jeni.Injector):
+    pass
+
+
+@WithOrderedSpace.factory('space')
+def ospace():
+    return odict()
 
 
 class SubInjector(BasicInjector):
@@ -184,6 +196,30 @@ class InjectorSubTestCase(BasicInjectorTestCase):
         subinjector = self.injector.sub()
         sub_space = subinjector.get('space')
         self.assertIsNot(space, sub_space)
+
+    def test_subinjector_local_values(self):
+        subinjector = self.injector.sub(zero=0.0)
+        self.assertIsInstance(subinjector.get('zero'), float)
+
+        local_values = dict(zero=0.0)
+        subinjector = self.injector.sub(local_values)
+        self.assertIsInstance(subinjector.get('zero'), float)
+
+        more_local_values = dict(zero=Fraction(0, 1))
+        subinjector = self.injector.sub(local_values, more_local_values)
+        self.assertIsInstance(subinjector.get('zero'), Fraction)
+
+        subinjector = self.injector.sub(
+                local_values, more_local_values, zero=Decimal('0'))
+        self.assertIsInstance(subinjector.get('zero'), Decimal)
+
+    def test_subinjector_mixins(self):
+        subinjector = self.injector.sub(WithOrderedSpace)
+        injector_class = type(self.injector)
+        subinjector_class = type(self.injector.sub())
+        self.assertTrue(issubclass(subinjector_class, injector_class))
+        self.assertIsInstance(subinjector, WithOrderedSpace)
+        self.assertIsInstance(subinjector.get('space'), odict)
 
 
 class BasicInjectorAnnotationTestCase(unittest.TestCase):

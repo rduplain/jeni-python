@@ -776,11 +776,29 @@ class Injector(object):
         return self.annotator.has_annotations(*a, **kw)
 
     @classmethod
-    def sub(cls):
-        """Create and instantiate a sub-injector."""
-        # TODO: Local overrides?
+    def sub(cls, *mixins_and_dicts, **values):
+        """Create and instantiate a sub-injector.
+
+        Mixins and local value dicts can be passed in as arguments.  Local
+        values can also be passed in as keyword arguments.
+        """
+
         class SubInjector(cls):
             pass
+
+        mixins = [ x for x in mixins_and_dicts if isinstance(x, type) ]
+        if mixins:
+            SubInjector.__bases__ = tuple(mixins) + SubInjector.__bases__
+
+        dicts = [ x for x in mixins_and_dicts if not isinstance(x, type) ]
+        for d in dicts[::-1]:
+            for k,v in d.items():
+                if k not in values:
+                    values[k] = v
+
+        for k,v in values.items():
+            SubInjector.value(k, v)
+
         return SubInjector()
 
 
