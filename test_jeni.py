@@ -417,6 +417,38 @@ class AnnotatedProviderTestCase(unittest.TestCase):
         self.assertEqual('spamspamspamspam', provider.foo)
 
 
+class TestCycles(unittest.TestCase):
+    def setUp(self):
+        class Injector(jeni.Injector): pass
+
+        @Injector.factory('one')
+        @jeni.annotate('three')
+        def three_minus_2(three):
+            return not three-2
+
+        @Injector.factory('two')
+        @jeni.annotate('one')
+        def one_times_2(one):
+            return not one*2
+
+        @Injector.factory('three')
+        @jeni.annotate('two')
+        def two_plus_1(two):
+            return not two+1
+
+        self.injector = Injector()
+
+    def test_cycles(self):
+        with self.assertRaises(jeni.DependencyCycleError) as raises:
+            self.injector.get('one')
+
+        self.assertEqual(raises.exception.notes, (
+                ('one', None),
+                ('three', None),
+                ('two', None),
+                ('one', None)))
+
+
 class WrapsTestCase(unittest.TestCase):
     def setUp(self):
         @jeni.annotate('spam')

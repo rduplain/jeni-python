@@ -32,6 +32,13 @@ class UnsetError(LookupError):
         super(UnsetError, self).__init__(*a, **kw)
 
 
+class DependencyCycleError(LookupError):
+    """Note is not able to be provided, because it depends on itself."""
+    def __init__(self, *a, **kw):
+        self.notes = kw.pop('notes', None)
+        super(DependencyCycleError, self).__init__(*a, **kw)
+
+
 @six.add_metaclass(abc.ABCMeta)
 class Provider(object):
     """Provide a single prepared dependency."""
@@ -382,6 +389,8 @@ class Injector(object):
         #: Records counts as soon as get is called, even if unset or error.
         self.stats = collections.defaultdict(int)
 
+        self.instantiating = []
+
     @classmethod
     def provider(cls, note, provider=None, name=False):
         """Register a provider, either a Provider class or a generator.
@@ -587,7 +596,18 @@ class Injector(object):
         except LookupError:
             msg = "Unable to resolve '{}'"
             raise LookupError(msg.format(note))
-        return self.handle_provider(provider_or_fn, note)
+
+        self.instantiating.append((basenote, name))
+        try:
+            if self.instantiating.count((basenote, name)) > 1:
+                stack = ' <- '.join(
+                        repr(note) for note in self.instantiating )
+                raise DependencyCycleError(
+                        stack, notes=tuple(self.instantiating))
+
+            return self.handle_provider(provider_or_fn, note)
+        finally:
+            self.instantiating.pop()
 
     def close(self):
         """Close injector & injected Provider instances, including generators.
