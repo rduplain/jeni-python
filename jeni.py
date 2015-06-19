@@ -389,6 +389,8 @@ class Injector(object):
         #: Records counts as soon as get is called, even if unset or error.
         self.stats = collections.defaultdict(int)
 
+        #: Collection of note tuples which are currently being instantiated.
+        #: This allows for dependency cycle checks.
         self.instantiating = []
 
     @classmethod
@@ -600,10 +602,9 @@ class Injector(object):
         self.instantiating.append((basenote, name))
         try:
             if self.instantiating.count((basenote, name)) > 1:
-                stack = ' <- '.join(
-                        repr(note) for note in self.instantiating )
-                raise DependencyCycleError(
-                        stack, notes=tuple(self.instantiating))
+                stack = ' <- '.join(repr(note) for note in self.instantiating)
+                notes = tuple(self.instantiating)
+                raise DependencyCycleError(stack, notes=notes)
 
             return self.handle_provider(provider_or_fn, note)
         finally:
