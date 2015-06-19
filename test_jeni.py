@@ -438,6 +438,11 @@ class TestCycles(unittest.TestCase):
 
         self.injector = Injector()
 
+        # Call functions to simplify coverage.
+        three_minus_2(3)
+        one_times_2(1)
+        two_plus_1(2)
+
     def test_cycles(self):
         with self.assertRaises(jeni.DependencyCycleError) as raises:
             self.injector.get('one')
