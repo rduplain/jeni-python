@@ -2,8 +2,6 @@ import unittest
 
 import jeni
 
-from test_jeni import BasicInjector
-
 
 class Python2AnnotationTestCase(unittest.TestCase):
     def test_annotate_without_annotations(self):
