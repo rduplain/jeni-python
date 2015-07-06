@@ -32,7 +32,7 @@ class UnsetError(LookupError):
         super(UnsetError, self).__init__(*a, **kw)
 
 
-class DependencyCycleError(LookupError):
+class DependencyCycleError(RuntimeError):
     """Note is not able to be provided, because it depends on itself."""
     def __init__(self, *a, **kw):
         self.notes = kw.pop('notes', None)
