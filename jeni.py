@@ -791,7 +791,7 @@ class Injector(object):
             SubInjector.__bases__ = tuple(mixins) + SubInjector.__bases__
 
         dicts = [ x for x in mixins_and_dicts if not isinstance(x, type) ]
-        for d in dicts[::-1]:
+        for d in reversed(dicts):
             for k,v in d.items():
                 if k not in values:
                     values[k] = v
