@@ -168,6 +168,15 @@ This is useful in a context manager::
 Annotate with note 'injector' to inject the injector.
 
 
+``Injector.sub(cls, *mixins_and_dicts, **values)``
+--------------------------------------------------
+
+Create and instantiate a sub-injector.
+
+Mixins and local value dicts can be passed in as arguments.  Local
+values can also be passed in as keyword arguments.
+
+
 ``Injector.provider(cls, note, provider=None, name=False)``
 -----------------------------------------------------------
 
