@@ -4,7 +4,7 @@
 
 """``jeni`` injects annotated dependencies"""
 
-__version__ = '0.3.7-dev'
+__version__ = '0.3.7'
 
 import abc
 import collections
