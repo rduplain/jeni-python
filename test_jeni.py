@@ -950,6 +950,7 @@ class InjectorStatsTestCase(unittest.TestCase):
             'hello': 1,
             'hello:thing': 1,
             'eggs': 2,
+            (jeni.PARTIAL_REGARDLESS, (eggs, (), ())): 1,
         }
         self.injector.get('eggs')
         self.injector.get('hello')
@@ -962,6 +963,7 @@ class InjectorStatsTestCase(unittest.TestCase):
             'hello': 10,
             'hello:thing': 15,
             'eggs': 21,
+            (jeni.PARTIAL_REGARDLESS, (eggs, (), ())): 1,
         }
         for _ in range(10):
             self.injector.get('hello')
@@ -992,7 +994,6 @@ class TestGeneratorProvider(unittest.TestCase):
         def fn():
             yield 42
         provider = jeni.GeneratorProvider(fn)
-        provider.init()
         self.assertEqual(42, provider.get())
         self.assertEqual(42, provider.get())
         self.assertRaises(TypeError, provider.get, name='name')
@@ -1002,17 +1003,10 @@ class TestGeneratorProvider(unittest.TestCase):
             "not a generator"
         self.assertRaises(TypeError, jeni.GeneratorProvider, fn)
 
-    def test_init_error(self):
-        def fn(): yield
-        provider = jeni.GeneratorProvider(fn)
-        self.assertRaises(RuntimeError, provider.get)
-        self.assertRaises(RuntimeError, provider.close)
-
     def test_init_no_error(self):
         def fn():
             yield 42
         provider = jeni.GeneratorProvider(fn)
-        provider.init()
         provider.get()
         provider.close()
 
@@ -1021,14 +1015,12 @@ class TestGeneratorProvider(unittest.TestCase):
             if work:
                 yield 'foo'
         self.assertEqual(['foo'], list(fn(work=True)))
-        provider = jeni.GeneratorProvider(fn)
-        self.assertRaises(RuntimeError, provider.init)
+        self.assertRaises(RuntimeError, jeni.GeneratorProvider, fn)
 
     def test_generator_with_broken_name_support(self):
         def fn():
             yield 42
         provider = jeni.GeneratorProvider(fn, support_name=True)
-        provider.init()
         self.assertEqual(42, provider.get())
         self.assertRaises(RuntimeError, provider.get, name='name')
 
@@ -1036,7 +1028,6 @@ class TestGeneratorProvider(unittest.TestCase):
         def fn():
             yield 'one'; yield 'two'
         provider = jeni.GeneratorProvider(fn)
-        provider.init()
         self.assertRaises(RuntimeError, provider.close)
 
 
@@ -1104,18 +1095,10 @@ class TestBrokenProvider(unittest.TestCase):
         self.Injector = self.TestInjector
         self.injector = self.Injector()
 
-    def decorate(self):
-        @self.Injector.provider('no get')
-        class BadProvider(object):
-            pass
-
     def subclass(self):
         class BadSubclass(jeni.Provider):
             pass
         return BadSubclass
-
-    def test_interface_check(self):
-        self.assertRaises(ValueError, self.decorate)
 
     def test_subclass_meta(self):
         cls = self.subclass()
