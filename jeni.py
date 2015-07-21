@@ -613,7 +613,7 @@ class Injector(object):
         if name is None and basenote in self.values:
             return self.values[basenote]
         try:
-            provider_or_fn = self.lookup(basenote)
+            provider_factory = self.lookup(basenote)
         except LookupError:
             msg = "Unable to resolve '{}'"
             raise LookupError(msg.format(note))
@@ -625,7 +625,7 @@ class Injector(object):
                 notes = tuple(self.instantiating)
                 raise DependencyCycleError(stack, notes=notes)
 
-            return self.handle_provider(provider_or_fn, note)
+            return self.handle_provider(provider_factory, note)
         finally:
             self.instantiating.pop()
 
@@ -683,11 +683,11 @@ class Injector(object):
             return note, None
         return match.groups()
 
-    def handle_provider(self, provider_or_fn, note):
+    def handle_provider(self, provider_factory, note):
         """Get value from provider as requested by note."""
         # Implementation in separate method to support accurate book-keeping.
         basenote, name = self.parse_note(note)
-        result = self._handle_provider(provider_or_fn, note, basenote, name)
+        result = self._handle_provider(provider_factory, note, basenote, name)
         if basenote not in self.get_order:
             self.get_order.append(basenote)
         return result
