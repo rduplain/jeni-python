@@ -1185,16 +1185,16 @@ class TestClassInProgress(unittest.TestCase):
         self.assertFalse(jeni.class_in_progress(stack=stack))
 
 
-class TestIsCallable(unittest.TestCase):
+class TestCallable(unittest.TestCase):
     def test_annotate(self):
-        self.assertTrue(jeni.is_callable(jeni.annotate))
+        self.assertTrue(callable(jeni.annotate))
 
     def test_lambda(self):
-        self.assertTrue(jeni.is_callable(lambda: None))
+        self.assertTrue(callable(lambda: None))
 
     def test_object_type_and_instance(self):
-        self.assertTrue(jeni.is_callable(object))
-        self.assertFalse(jeni.is_callable(object()))
+        self.assertTrue(callable(object))
+        self.assertFalse(callable(object()))
 
 
 if __name__ == '__main__': unittest.main()

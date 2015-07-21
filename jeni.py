@@ -210,7 +210,7 @@ class Annotator(object):
         be of length 2, and `('maybe', ...)` and `('partial', ...)` are
         reserved.
         """
-        if not keyword_notes and len(notes) == 1 and is_callable(notes[0]):
+        if not keyword_notes and len(notes) == 1 and callable(notes[0]):
             # Here @annotate is being used without arguments.
             fn = notes[0]
             if not hasattr(fn, '__annotations__'):
@@ -847,8 +847,3 @@ def class_in_progress(stack=None):
         if statement_list[0].strip().startswith('class '):
             return True
     return False
-
-
-def is_callable(obj):
-    """True if object is callable, else False."""
-    return hasattr(obj, '__call__')
