@@ -400,7 +400,6 @@ class Injector(object):
 
         self.closed = False
         self.instances = {}
-        self.values = {}
 
         self.get_order = []
 
@@ -610,8 +609,6 @@ class Injector(object):
                 return self.eager_partial_regardless(fn, *a, **dict(kw_items))
 
         basenote, name = self.parse_note(note)
-        if name is None and basenote in self.values:
-            return self.values[basenote]
         try:
             provider_or_fn = self.lookup(basenote)
         except LookupError:
@@ -711,8 +708,7 @@ class Injector(object):
         try:
             if name is not None:
                 return get(name=name)
-            self.values[basenote] = get()
-            return self.values[basenote]
+            return get()
 
         except UnsetError:
             # Use sys.exc_info to support both Python 2 and Python 3.
