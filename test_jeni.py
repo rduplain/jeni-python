@@ -842,16 +842,25 @@ def closing_generator_with_name():
         thing.close()
 
 
+@CloseTestInjector.factory('unset_thing')
+def unset_thing_factory():
+    return CloseMe('unset')
+
+
 @CloseTestInjector.provider('unset')
 class UnsetProvider(jeni.Provider):
-    def __init__(self):
-        self.thing = CloseMe('unset')
+    @jeni.annotate('unset_thing')
+    def __init__(self, thing):
+        self.closed = False
+        self.thing = thing
 
     def get(self):
         raise jeni.UnsetError()
 
     def close(self):
-        assert False, 'This should not be called by injector.'
+        assert not self.closed, '{!r} already closed'.format(self)
+        self.closed = True
+        self.thing.close()
 
 
 @CloseTestInjector.provider('annotated_close')
@@ -914,18 +923,11 @@ class ClosingTestCase(unittest.TestCase):
         for x in range(100):
             self._test_close_order()
 
-    def test_unset_not_closed(self):
-        # Verify that close test fires assertion.
-        asserted = False
-        try:
-            provider = UnsetProvider()
-            provider.close()
-        except AssertionError:
-            asserted = True
-        assert asserted, 'UnsetProvider.close assertion not caught'
-
+    def test_unset_closed(self):
+        thing = self.injector.get('unset_thing')
         self.assertRaises(jeni.UnsetError, self.injector.get, 'unset')
         self.injector.close()
+        self.assertTrue(thing.closed)
 
     def test_cannot_get_after_close(self):
         self.assertEqual('thing', self.injector.get('echo:thing'))
