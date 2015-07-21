@@ -693,6 +693,8 @@ class Injector(object):
         return result
 
     def _handle_provider(self, provider_factory, note, basenote, name):
+        # _handle_provider could be even shorter if
+        # Injector.apply() worked with classes, issue #9.
         if basenote not in self.instances:
             if (isinstance(provider_factory, type) and
                     self.has_annotations(provider_factory.__init__)):
