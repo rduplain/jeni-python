@@ -402,7 +402,7 @@ class Injector(object):
         self.instances = {}
         self.values = {}
 
-        self.get_order = []
+        self.finalizers = []
 
         #: Statistics for resolved notes, note -> count.
         #: Records counts as soon as get is called, even if unset or error.
@@ -613,7 +613,7 @@ class Injector(object):
         if name is None and basenote in self.values:
             return self.values[basenote]
         try:
-            provider_or_fn = self.lookup(basenote)
+            provider_factory = self.lookup(basenote)
         except LookupError:
             msg = "Unable to resolve '{}'"
             raise LookupError(msg.format(note))
@@ -625,7 +625,7 @@ class Injector(object):
                 notes = tuple(self.instantiating)
                 raise DependencyCycleError(stack, notes=notes)
 
-            return self.handle_provider(provider_or_fn, note)
+            return self.handle_provider(provider_factory, note)
         finally:
             self.instantiating.pop()
 
@@ -638,9 +638,9 @@ class Injector(object):
         """
         if self.closed:
             raise RuntimeError('{!r} already closed'.format(self))
-        for basenote in reversed(self.get_order):
+        for finalizer in reversed(self.finalizers):
             # Note: Unable to apply injector on close method.
-            self.instances[basenote].close()
+            finalizer()
         self.closed = True
 
     def prepare_callable(self, fn, partial=False):
@@ -683,16 +683,11 @@ class Injector(object):
             return note, None
         return match.groups()
 
-    def handle_provider(self, provider_or_fn, note):
+    def handle_provider(self, provider_factory, note):
         """Get value from provider as requested by note."""
         # Implementation in separate method to support accurate book-keeping.
         basenote, name = self.parse_note(note)
-        result = self._handle_provider(provider_or_fn, note, basenote, name)
-        if basenote not in self.get_order:
-            self.get_order.append(basenote)
-        return result
 
-    def _handle_provider(self, provider_factory, note, basenote, name):
         # _handle_provider could be even shorter if
         # Injector.apply() worked with classes, issue #9.
         if basenote not in self.instances:
@@ -704,6 +699,10 @@ class Injector(object):
             else:
                 self.instances[basenote] = self.apply_regardless(
                         provider_factory)
+
+            provider = self.instances[basenote]
+            if hasattr(provider, 'close'):
+                self.finalizers.append(self.instances[basenote].close)
 
         provider = self.instances[basenote]
         get = self.partial_regardless(provider.get)
