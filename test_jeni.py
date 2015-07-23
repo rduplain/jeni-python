@@ -812,7 +812,7 @@ class ClosingProvider(jeni.Provider):
     def __init__(self):
         self.thing = CloseMe('via_class')
 
-    def get(self):
+    def get(self, name=None):
         if self.thing.closed is None:
             self.thing.open()
         return self.thing
@@ -938,6 +938,11 @@ class ClosingTestCase(unittest.TestCase):
         self.injector.get('annotated_close')
         # Injector.close does not apply annotations.
         self.assertRaises(TypeError, self.injector.close)
+
+    def test_multiple_get_then_close(self):
+        self.injector.get('via_class:foo')
+        self.injector.get('via_class:bar')
+        self.injector.close() # AssertionError likely if this fails.
 
 
 class InjectorStatsTestCase(unittest.TestCase):
