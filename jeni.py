@@ -642,6 +642,8 @@ class Injector(object):
             # Note: Unable to apply injector on close method.
             finalizer()
         self.closed = True
+        self.instances.clear()
+        self.values.clear()
 
     def prepare_callable(self, fn, partial=False):
         """Prepare arguments required to apply function."""
