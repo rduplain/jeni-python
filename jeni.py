@@ -393,8 +393,6 @@ class Injector(object):
 
         Annotate with note 'injector' to inject the injector.
         """
-        if provide_self:
-            self.value('injector', self)
 
         self.annotator = self.annotator_class()
 
@@ -411,6 +409,9 @@ class Injector(object):
         #: Collection of note tuples which are currently being instantiated.
         #: This allows for dependency cycle checks.
         self.instantiating = []
+
+        if provide_self:
+            self.values['injector'] = self
 
     @classmethod
     def provider(cls, note, provider=None, name=False):
