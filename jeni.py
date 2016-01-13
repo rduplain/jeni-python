@@ -365,7 +365,7 @@ class Injector(object):
     generator_provider = GeneratorProvider
     re_note = re.compile(r'^(.*?)(?::(.*))?$') # annotation is 'object:name'
 
-    def __init__(self, provide_self=False):
+    def __init__(self, provide_self=True):
         """A subclass could take arguments, but should pass keywords to super.
 
         An Injector subclass inherits the provider registry of its base

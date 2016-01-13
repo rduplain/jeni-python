@@ -155,7 +155,7 @@ class BasicInjectorTestCase(unittest.TestCase):
 class InjectSelfTestCase(unittest.TestCase):
     def test_provide_self_default(self):
         self.injector = jeni.Injector()
-        self.assertRaises(LookupError, self.injector.get, 'injector')
+        self.assertEqual(self.injector, self.injector.get('injector'))
 
     def test_provide_self_true(self):
         self.injector = jeni.Injector(provide_self=True)
@@ -226,6 +226,10 @@ class InjectorSubTestCase(BasicInjectorTestCase):
         self.assertTrue(issubclass(subinjector_class, injector_class))
         self.assertIsInstance(subinjector, WithOrderedSpace)
         self.assertIsInstance(subinjector.get('space'), odict)
+
+    def test_subinjector_provides_injector(self):
+        subinjector = self.injector.sub()
+        self.assertEqual(subinjector, subinjector.get('injector'))
 
 
 class BasicInjectorAnnotationTestCase(unittest.TestCase):
