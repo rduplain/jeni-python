@@ -13,7 +13,7 @@ Overview
 2. Write code with natural call signatures taking those dependencies as input.
 3. Implement a **Provider** for each dependency, register with an **Injector**.
 
-jeni runs on Python 2.7, Python 3.2 through 3.4, and pypy.
+jeni runs on Python 2.7, Python 3.2 through 3.5, and pypy.
 
 
 Motivation
