@@ -79,7 +79,7 @@ virtualenv: .in_virtualenv.py
 	@echo 'elif getattr(sys, "base_prefix", sys.prefix) != sys.prefix:'   >> $@
 	@echo '    sys.exit(0)'                                               >> $@
 	@echo 'else:'                                                         >> $@
-	@echo '    sys.stderr.write("Use a virtualenv, 2.7 or 3.2+.\\n")'     >> $@
+	@echo '    sys.stderr.write("Use a virtualenv, 2.7 or 3.3+.\\n")'     >> $@
 	@echo '    sys.exit(1)'                                               >> $@
 
 .PHONY: dist
