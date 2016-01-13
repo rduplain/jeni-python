@@ -394,12 +394,10 @@ class Injector(object):
             ...
             injector.exit()
 
-        By default, the injector does not provide itself, but will when asked::
+        The injector provides itself as the `'injector'` service::
 
-            with Injector(provide_self=True) as injector:
+            with Injector() as injector:
                 injector.get('injector')
-
-        Annotate with note 'injector' to inject the injector.
         """
 
         self.annotator = self.annotator_class()

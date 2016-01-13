@@ -168,12 +168,10 @@ The injector lifecycle can also be managed asynchronously using the
     ...
     injector.exit()
 
-By default, the injector does not provide itself, but will when asked::
+The injector provides itself as the `'injector'` service::
 
-    with Injector(provide_self=True) as injector:
+    with Injector() as injector:
         injector.get('injector')
-
-Annotate with note 'injector' to inject the injector.
 
 
 ``Injector.sub(cls, *mixins_and_dicts, **values)``
