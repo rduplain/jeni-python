@@ -137,8 +137,8 @@ method, annotate ``__init__`` and access the value via `self`.
 Collects dependencies and reads annotations to inject them.
 
 
-``Injector.__init__(self, provide_self=False)``
------------------------------------------------
+``Injector.__init__(self, provide_self=True)``
+----------------------------------------------
 
 A subclass could take arguments, but should pass keywords to super.
 
@@ -155,12 +155,20 @@ or providing alternative dependencies in a different runtime::
     class Injector(BaseInjector):
         "Subclass provides namespace when registering providers."
 
+Injector instances may be used as a context manager::
+
+    with Injector() as injector:
+        injector.apply(annotated_fn)
+
+The injector lifecycle can also be managed asynchronously using the
+`enter()` and `exit()` methods::
+
+    injector = Injector().enter()
+    injector.apply(annotated_fn)
+    ...
+    injector.exit()
+
 By default, the injector does not provide itself, but will when asked::
-
-    injector = Injector(provide_self=True)
-    injector.get('injector')
-
-This is useful in a context manager::
 
     with Injector(provide_self=True) as injector:
         injector.get('injector')
