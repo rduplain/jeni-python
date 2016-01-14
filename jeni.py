@@ -11,6 +11,7 @@ import collections
 import functools
 import inspect
 import re
+import warnings
 import sys
 
 import six
@@ -418,6 +419,9 @@ class Injector(object):
 
         if provide_self:
             self.values['injector'] = self
+        else:
+            warnings.warn(
+                    DeprecationWarning('provide_self=False is not supported'))
 
     @classmethod
     def provider(cls, note, provider=None, name=False):
