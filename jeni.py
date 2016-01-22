@@ -11,7 +11,6 @@ import collections
 import functools
 import inspect
 import re
-import warnings
 import sys
 
 import six
@@ -366,7 +365,7 @@ class Injector(object):
     generator_provider = GeneratorProvider
     re_note = re.compile(r'^(.*?)(?::(.*))?$') # annotation is 'object:name'
 
-    def __init__(self, provide_self=True):
+    def __init__(self):
         """A subclass could take arguments, but should pass keywords to super.
 
         An Injector subclass inherits the provider registry of its base
@@ -417,11 +416,7 @@ class Injector(object):
         #: This allows for dependency cycle checks.
         self.instantiating = []
 
-        if provide_self:
-            self.values['injector'] = self
-        else:
-            warnings.warn(
-                    DeprecationWarning('provide_self=False is not supported'))
+        self.values['injector'] = self
 
     @classmethod
     def provider(cls, note, provider=None, name=False):

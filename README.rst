@@ -137,8 +137,8 @@ method, annotate ``__init__`` and access the value via `self`.
 Collects dependencies and reads annotations to inject them.
 
 
-``Injector.__init__(self, provide_self=True)``
-----------------------------------------------
+``Injector.__init__(self)``
+---------------------------
 
 A subclass could take arguments, but should pass keywords to super.
 
