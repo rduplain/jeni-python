@@ -11,6 +11,7 @@ import collections
 import functools
 import inspect
 import re
+import warnings
 import sys
 
 import six
@@ -365,7 +366,7 @@ class Injector(object):
     generator_provider = GeneratorProvider
     re_note = re.compile(r'^(.*?)(?::(.*))?$') # annotation is 'object:name'
 
-    def __init__(self, provide_self=False):
+    def __init__(self, provide_self=True):
         """A subclass could take arguments, but should pass keywords to super.
 
         An Injector subclass inherits the provider registry of its base
@@ -381,20 +382,24 @@ class Injector(object):
             class Injector(BaseInjector):
                 "Subclass provides namespace when registering providers."
 
-        By default, the injector does not provide itself, but will when asked::
+        Injector instances may be used as a context manager::
 
-            injector = Injector(provide_self=True)
-            injector.get('injector')
+            with Injector() as injector:
+                injector.apply(annotated_fn)
 
-        This is useful in a context manager::
+        The injector lifecycle can also be managed asynchronously using the
+        `enter()` and `exit()` methods::
 
-            with Injector(provide_self=True) as injector:
+            injector = Injector().enter()
+            injector.apply(annotated_fn)
+            ...
+            injector.exit()
+
+        The injector provides itself as the `'injector'` service::
+
+            with Injector() as injector:
                 injector.get('injector')
-
-        Annotate with note 'injector' to inject the injector.
         """
-        if provide_self:
-            self.value('injector', self)
 
         self.annotator = self.annotator_class()
 
@@ -411,6 +416,12 @@ class Injector(object):
         #: Collection of note tuples which are currently being instantiated.
         #: This allows for dependency cycle checks.
         self.instantiating = []
+
+        if provide_self:
+            self.values['injector'] = self
+        else:
+            warnings.warn(
+                    DeprecationWarning('provide_self=False is not supported'))
 
     @classmethod
     def provider(cls, note, provider=None, name=False):
