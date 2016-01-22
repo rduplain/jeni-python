@@ -137,8 +137,8 @@ method, annotate ``__init__`` and access the value via `self`.
 Collects dependencies and reads annotations to inject them.
 
 
-``Injector.__init__(self)``
----------------------------
+``Injector.__init__(self, *dicts, **values)``
+---------------------------------------------
 
 A subclass could take arguments, but should pass keywords to super.
 
@@ -172,6 +172,11 @@ The injector provides itself as the `'injector'` service::
 
     with Injector() as injector:
         injector.get('injector')
+
+Local values can be provided when constructing the injector::
+
+    with RequestInjector(request=request) as injector:
+        injector.get('form:username')
 
 
 ``Injector.sub(cls, *mixins_and_dicts, **values)``

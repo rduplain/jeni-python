@@ -365,7 +365,7 @@ class Injector(object):
     generator_provider = GeneratorProvider
     re_note = re.compile(r'^(.*?)(?::(.*))?$') # annotation is 'object:name'
 
-    def __init__(self):
+    def __init__(self, *dicts, **values):
         """A subclass could take arguments, but should pass keywords to super.
 
         An Injector subclass inherits the provider registry of its base
@@ -398,6 +398,12 @@ class Injector(object):
 
             with Injector() as injector:
                 injector.get('injector')
+
+        Local values can be provided when constructing the injector::
+
+            with RequestInjector(request=request) as injector:
+                injector.get('form:username')
+
         """
 
         self.annotator = self.annotator_class()
@@ -405,6 +411,10 @@ class Injector(object):
         self.closed = False
         self.instances = {}
         self.values = {}
+        for d in dicts:
+            self.values.update(d)
+        self.values.update(values)
+        self.values['injector'] = self
 
         self.finalizers = []
 
@@ -415,8 +425,6 @@ class Injector(object):
         #: Collection of note tuples which are currently being instantiated.
         #: This allows for dependency cycle checks.
         self.instantiating = []
-
-        self.values['injector'] = self
 
     @classmethod
     def provider(cls, note, provider=None, name=False):

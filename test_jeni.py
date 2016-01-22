@@ -164,6 +164,33 @@ class InjectSelfTestCase(unittest.TestCase):
         self.assertEqual(injector2, injector2.get('injector'))
 
 
+class InjectorLocals(unittest.TestCase):
+    def test_ctor_kwargs(self):
+        injector = jeni.Injector(flavor='banana')
+        self.assertEqual('banana', injector.get('flavor'))
+
+    def test_ctor_args(self):
+        injector = jeni.Injector(dict(flavor='banana'))
+        self.assertEqual('banana', injector.get('flavor'))
+
+    def test_ctor_overrides(self):
+        class SubInjector(jeni.Injector): pass
+        SubInjector.value('flavor', 'banana')
+        injector = jeni.Injector(flavor='triangle')
+        self.assertEqual('triangle', injector.get('flavor'))
+
+    def test_ctor_priority(self):
+        injector = jeni.Injector(dict(flavor='banana'), flavor='triangle')
+        self.assertEqual('triangle', injector.get('flavor'))
+
+    def test_isolation(self):
+        injector1 = jeni.Injector(flavor='banana')
+        injector2 = jeni.Injector()
+        injector3 = injector1.sub()
+        self.assertRaises(LookupError, injector2.get, 'flavor')
+        self.assertRaises(LookupError, injector3.get, 'flavor')
+
+
 class SubInjectorTestCase(BasicInjectorTestCase):
     def setUp(self):
         self.injector = SubInjector()
